@@ -1,54 +1,31 @@
 module Main where
 
-import Color exposing (blue, white, rgb, black)
 import Html exposing (div,text,img)
 import Html.Attributes exposing (style, src)
-import Graphics.Element exposing (show,layers)
 import List exposing (map, map2, concatMap, append, concat)
+import BattleshipModel exposing (..)
 
 
-type alias Pos = (Int,Int)
-
-type LogEntry = Hit Pos
-              | Miss Pos
-
-type alias MissleLog = List LogEntry
-
-type ShipType = AircraftCarrier
-              | Battleship
-              | Submarine
-              | Cruiser
-              | Patrol
-
-shipLength : ShipType -> Int
-shipLength shipType =
-  case shipType of
-      AircraftCarrier -> 5
-      Battleship -> 4
-      Submarine -> 3
-      Cruiser -> 3
-      Patrol -> 2
-
-type Orientation = Horizontal
-                 | Vertical
-
-shipEndPos shipType position orientation =
-  let (x,y) = position
-  in
-  case orientation of
-    Horizontal -> (x + shipLength shipType, y + 1)
-    Vertical -> (x + 1, y + shipLength shipType )
-
+squareSize : Int
 squareSize = 32
+
+
+offset : Int -> Int
 offset x = x*squareSize
+
+
+px : Int -> String
 px x = (toString x) ++ "px"
 
+
+transform : Orientation -> Html.Attribute
 transform orientation =
   case orientation of
     Horizontal -> style []
     Vertical -> style [("transform", "rotate(90deg)")]
 
 
+shipImage : ShipType -> String
 shipImage shipType =
   case shipType of
     AircraftCarrier -> "img/AircraftCarrier.png"
@@ -58,6 +35,16 @@ shipImage shipType =
     Patrol -> "img/PatrolBoat.png"
 
 
+shipEndPos : ShipType -> GridPosition -> Orientation -> GridPosition
+shipEndPos shipType position orientation =
+  let (x,y) = position
+  in
+  case orientation of
+    Horizontal -> (x + shipLength shipType, y + 1)
+    Vertical -> (x + 1, y + shipLength shipType )
+
+
+ship : (ShipType, GridPosition, Orientation) -> Html.Html
 ship (shipType, position, orientation) =
   let (x,y) = position
       (x2,y2) = shipEndPos shipType position orientation
@@ -76,14 +63,16 @@ ship (shipType, position, orientation) =
       img [src (shipImage shipType) ] []
     ]
   ]
---
-indicies =
+
+
+allPositions : List GridPosition
+allPositions =
   [0..10]
   |> concatMap (\i -> [0..10]
   |> map (\j -> (i,j)))
 
 
--- gameSquare : Pos -> List Element
+gameSquare : GridPosition -> Html.Html
 gameSquare (i,j) =
   div
   [ style [
@@ -97,20 +86,25 @@ gameSquare (i,j) =
     ]
   ] []
 
-gameBoard =
-   indicies
-   |> map gameSquare
-   |> (\c -> append c (map ship ships) )
-   |> div
-      [
-        style
-        [
-          ("position", "relative"),
-          ("margin", "50px")
-        ]
-      ]
 
-ships : List (ShipType, Pos, Orientation)
+gameGrid : List Html.Html -> Html.Html
+gameGrid children =
+  div
+    [
+     style
+     [
+       ("position", "relative"),
+       ("margin", "50px")
+     ]
+    ]
+    (append (map gameSquare allPositions) children)
+
+
+--
+-- Test Rendering
+--
+
+ships : List ShipPlacement
 ships = [
    (AircraftCarrier, (1,1), Vertical),
    (Battleship, (2,2), Horizontal),
@@ -119,4 +113,6 @@ ships = [
    (Patrol, (9,6), Horizontal)
   ]
 
-main = gameBoard
+
+main : Html.Html
+main = gameGrid <| map ship ships
