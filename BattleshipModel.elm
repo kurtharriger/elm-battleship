@@ -1,27 +1,33 @@
 module BattleshipModel where
 
-type ShipType = AircraftCarrier
-              | Battleship
-              | Submarine
-              | Cruiser
-              | Patrol
+
+type ShipType
+  = AircraftCarrier
+  | Battleship
+  | Submarine
+  | Cruiser
+  | Patrol
 
 
-type Orientation = Horizontal
-                 | Vertical
+type Orientation
+  = Horizontal
+  | Vertical
 
 
-type alias GridPosition = (Int, Int)
+type alias GridPosition
+  = (Int, Int)
 
 
-type alias ShipPlacement = (ShipType, GridPosition, Orientation)
+type alias ShipPlacement
+  = (ShipType, GridPosition, Orientation)
 
 
-type LogEntry = Hit GridPosition
-              | Miss GridPosition
+type MissileResult
+  = Hit
+  | Miss
 
 
-type alias MissleLog = List LogEntry
+type alias GameModel = (List ShipPlacement, List (MissileResult, GridPosition))
 
 
 shipLength : ShipType -> Int

@@ -72,19 +72,27 @@ allPositions =
   |> map (\j -> (i,j)))
 
 
+positionStyles : GridPosition -> List (String, String)
+positionStyles (i,j)  =
+  [
+    ("position", "absolute"),
+    ("top", offset i |> px),
+    ("left", offset j |> px),
+    ("width", squareSize |> px),
+    ("height", squareSize |> px)
+  ]
+
 gameSquare : GridPosition -> Html.Html
-gameSquare (i,j) =
-  div
-  [ style [
-      ("width", squareSize |> px),
-      ("height", squareSize |> px),
-      ("border","1px solid black"),
-      ("position", "absolute"),
-      ("top", offset i |> px),
-      ("left", offset j |> px),
-      ("background-color", "blue")
-    ]
-  ] []
+gameSquare pos =
+    div
+    [
+      style <|
+        append (positionStyles pos)
+        [
+          ("border","1px solid black"),
+          ("background-color", "blue")
+        ]
+    ] []
 
 
 gameGrid : List Html.Html -> Html.Html
@@ -94,7 +102,9 @@ gameGrid children =
      style
      [
        ("position", "relative"),
-       ("margin", "50px")
+       ("margin", "50px"),
+       ("width", (offset 11) |> px),
+       ("height", (offset 11) |> px)
      ]
     ]
     (append (map gameSquare allPositions) children)
@@ -103,6 +113,44 @@ gameGrid children =
 --
 -- Test Rendering
 --
+
+missleIndicator (result, pos) =
+  let color = case result of
+    Miss -> "white"
+    Hit -> "red"
+  in
+  div
+    [
+      style <| positionStyles pos
+    ]
+    [
+      div
+      [
+        style <|
+
+          [
+            ("width", 20 |> px),
+            ("height", 20 |> px),
+            ("position", "relative"),
+            ("left", "50%"),
+            ("top", "50%"),
+            ("margin", "-10px 0 0 -10px"),
+            ("background-color", color),
+            ("border-radius", "10px")
+          ]
+      ] []
+    ]
+
+
+view : GameModel -> Html.Html
+view (ships, log) =
+  div [ ]
+    [
+      div [ style [("float", "left")]] [gameGrid <| map ship ships],
+      div [ style [("float", "left")]] [gameGrid <| map missleIndicator log]
+    ]
+
+
 
 ships : List ShipPlacement
 ships = [
@@ -114,5 +162,12 @@ ships = [
   ]
 
 
+missleLog =
+  [
+    (Hit, (1,2)),
+    (Miss, (3, 4)),
+    (Miss, (8, 2))
+  ]
+
 main : Html.Html
-main = gameGrid <| map ship ships
+main = view (ships, missleLog)
