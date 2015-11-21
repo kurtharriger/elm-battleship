@@ -51,10 +51,14 @@ transform orientation =
 
 shipImage shipType =
   case shipType of
-    _ -> "img/Battleship.png"
+    AircraftCarrier -> "img/AircraftCarrier.png"
+    Battleship -> "img/Battleship.png"
+    Cruiser -> "img/Cruiser.png"
+    Submarine -> "img/Submarine.png"
+    Patrol -> "img/PatrolBoat.png"
 
 
-ship shipType position orientation =
+ship (shipType, position, orientation) =
   let (x,y) = position
       (x2,y2) = shipEndPos shipType position orientation
   in
@@ -69,11 +73,10 @@ ship shipType position orientation =
   ] [
     div [transform orientation]
     [
-      img [src "img/Battleship.png" ] []
+      img [src (shipImage shipType) ] []
     ]
   ]
 --
-indicies : List Pos
 indicies =
   [0..10]
   |> concatMap (\i -> [0..10]
@@ -97,7 +100,7 @@ gameSquare (i,j) =
 gameBoard =
    indicies
    |> map gameSquare
-   |> (\c -> append c [ship  Battleship (2,2) Horizontal] )
+   |> (\c -> append c (map ship ships) )
    |> div
       [
         style
@@ -106,5 +109,14 @@ gameBoard =
           ("margin", "50px")
         ]
       ]
+
+ships : List (ShipType, Pos, Orientation)
+ships = [
+   (AircraftCarrier, (1,1), Vertical),
+   (Battleship, (2,2), Horizontal),
+   (Cruiser, (5,5), Vertical),
+   (Submarine, (7,8), Vertical),
+   (Patrol, (9,6), Horizontal)
+  ]
 
 main = gameBoard
