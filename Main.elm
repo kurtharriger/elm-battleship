@@ -1,8 +1,8 @@
 module Main where
 
 import Color exposing (blue, white, rgb, black)
-import Html exposing (div,text)
-import Html.Attributes exposing (style)
+import Html exposing (div,text,img)
+import Html.Attributes exposing (style, src)
 import Graphics.Element exposing (show,layers)
 import List exposing (map, map2, concatMap, append, concat)
 
@@ -32,18 +32,64 @@ shipLength shipType =
 type Orientation = Horizontal
                  | Vertical
 
-type alias ShipPlacement = ShipType Pos Orientation
+shipEndPos shipType position orientation =
+  let (x,y) = position
+  in
+  case orientation of
+    Horizontal -> (x + shipLength shipType, y + 1)
+    Vertical -> (x + 1, y + shipLength shipType )
+
+squareSize = 32
+offset x = x*squareSize
+px x = (toString x) ++ "px"
+
+transform orientation =
+  case orientation of
+    Horizontal -> style []
+    Vertical -> style [("transform", "rotate(90deg)")]
+
+
+shipImage shipType =
+  case shipType of
+    _ -> "img/Battleship.png"
+
+
+ship shipType position orientation =
+  let (x,y) = position
+      (x2,y2) = shipEndPos shipType position orientation
+  in
+  div [
+    style [
+      ("width", (offset x2) - (offset x) |> px),
+      ("height", (offset y2) - (offset y) |> px),
+      ("position", "absolute"),
+      ("top", offset x |> px),
+      ("left", offset y |> px)
+    ]
+  ] [
+    div [transform orientation]
+    [
+      img [src "img/Battleship.png" ] []
+    ]
+  ]
+--
+indicies : List Pos
+indicies =
+  [0..10]
+  |> concatMap (\i -> [0..10]
+  |> map (\j -> (i,j)))
+
 
 -- gameSquare : Pos -> List Element
 gameSquare (i,j) =
   div
   [ style [
-      ("width", "40px"),
-      ("height", "40px"),
+      ("width", squareSize |> px),
+      ("height", squareSize |> px),
       ("border","1px solid black"),
       ("position", "absolute"),
-      ("top", (toString (i*40)) ++ "px"),
-      ("left", (toString (j*40)) ++ "px"),
+      ("top", offset i |> px),
+      ("left", offset j |> px),
       ("background-color", "blue")
     ]
   ] []
@@ -51,30 +97,14 @@ gameSquare (i,j) =
 gameBoard =
    indicies
    |> map gameSquare
-   |> (\c -> append c [ship (2,2)] )
-   |> div [ style
-    [
-      ("position", "relative"),
-      ("margin", "50px")
-    ]]
-
-ship (i,j) =
-  div
-  [ style [
-      ("width", "100px"),
-      ("height", "20px"),
-      ("position", "absolute"),
-      ("top", (i*40 + 20 |> toString) ++ "px"),
-      ("left", (j*40 + 10 |> toString) ++ "px"),
-      ("background-color", "black")
-    ]
-  ] []
-
---
-indicies : List Pos
-indicies =
-  [0..10]
-  |> concatMap (\i -> [0..10]
-  |> map (\j -> (i,j)))
+   |> (\c -> append c [ship  Battleship (2,2) Horizontal] )
+   |> div
+      [
+        style
+        [
+          ("position", "relative"),
+          ("margin", "50px")
+        ]
+      ]
 
 main = gameBoard
