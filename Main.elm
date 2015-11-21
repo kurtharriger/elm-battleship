@@ -1,9 +1,10 @@
 module Main where
 
 import Color exposing (blue, white, rgb, black)
-import Graphics.Collage exposing (Form, collage, filled, rect, outlined, solid, group, toForm, move)
+import Html exposing (div,text)
+import Html.Attributes exposing (style)
 import Graphics.Element exposing (show,layers)
-import List exposing (map, map2, concatMap, append)
+import List exposing (map, map2, concatMap, append, concat)
 
 
 type alias Pos = (Int,Int)
@@ -35,21 +36,39 @@ type alias ShipPlacement = ShipType Pos Orientation
 
 -- gameSquare : Pos -> List Element
 gameSquare (i,j) =
-  let r = rect 20 20
-  in
-  group [
-    r |> filled blue,
-    r |> outlined (solid black)
-  ]
-  |> move ((toFloat i*20),(toFloat j*20))
-
+  div
+  [ style [
+      ("width", "40px"),
+      ("height", "40px"),
+      ("border","1px solid black"),
+      ("position", "absolute"),
+      ("top", (toString (i*40)) ++ "px"),
+      ("left", (toString (j*40)) ++ "px"),
+      ("background-color", "blue")
+    ]
+  ] []
 
 gameBoard =
    indicies
    |> map gameSquare
-   |> group
-   |> move (-100,-100)
-   |> (\f -> collage 300 300 [f])
+   |> (\c -> append c [ship (2,2)] )
+   |> div [ style
+    [
+      ("position", "relative"),
+      ("margin", "50px")
+    ]]
+
+ship (i,j) =
+  div
+  [ style [
+      ("width", "100px"),
+      ("height", "20px"),
+      ("position", "absolute"),
+      ("top", (i*40 + 20 |> toString) ++ "px"),
+      ("left", (j*40 + 10 |> toString) ++ "px"),
+      ("background-color", "black")
+    ]
+  ] []
 
 --
 indicies : List Pos
