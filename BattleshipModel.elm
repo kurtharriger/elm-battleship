@@ -49,7 +49,7 @@ type PrepareModelAction
 
 type GameModelAction
   = NoOp
-  | PrepareAction PrepareModelAction
+  | PrepareAction PrepareModel
 
 
 initPreparingModel : PrepareModel
@@ -73,14 +73,9 @@ initModel = Preparing initPreparingModel
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
-  case (action, model) of
-    (NoOp, _) -> model
-    (PrepareAction prepareModelAction, Preparing prepareModel) ->
-      Preparing (updatePreparing prepareModelAction prepareModel)
-    _ ->
-      Debug.log ("illegal action " ++ (toString action) ++ " on " ++ (toString model))
-      model
-
+  case action of
+    PrepareAction prepareModel -> Preparing prepareModel
+    _ -> model
 
 shipLength : ShipType -> Int
 shipLength shipType =

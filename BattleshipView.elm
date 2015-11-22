@@ -143,29 +143,32 @@ missileIndicator result =
       ] []
     ]
 
-
+prepareView : Address PrepareModelAction -> PrepareModel -> Html.Html
+prepareView address {placed, selected, orientation} =
+  div [ style []]
+    [
+      div [ style [("margin", "50px"),("float", "left")]]
+        [gameGrid
+          (Signal.forwardTo address (\pos -> PlaceShip selected orientation pos))
+          (map ship placed)],
+      div [ style [("margin", "50px"),("float", "left")]] [
+        text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed))
+      ]
+    ]
 
 view : (Address GameModelAction) -> GameModel -> Html.Html
 view address model =
   case model of
-    Preparing {placed,selected,orientation} ->
-
-      div [ style []]
-        [
-          div [ style [("margin", "50px"),("float", "left")]]
-            [gameGrid
-              (Signal.forwardTo address (\pos -> PrepareAction (PlaceShip selected orientation pos)))
-              (map ship placed)],
-          div [ style [("margin", "50px"),("float", "left")]] [
-            text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed))
-          ]
-        ]
+    Preparing prepareModel ->
+      prepareView
+        (Signal.forwardTo address (\action -> PrepareAction (updatePreparing action prepareModel)))
+        prepareModel
 
     Playing (ships, log) ->
       div [ ]
         [
-          div [ style [("margin", "50px"), ("float", "left")]] [gameGrid doNothing <| map ship ships ],
-          div [ style [("margin", "50px"),("float", "left")]] [gameGrid doNothing <|map missileIndicator log]
+          div [ style [("margin", "50px"), ("float", "left")]] [gameGrid (Signal.forwardTo address (always NoOp)) <| map ship ships ],
+          div [ style [("margin", "50px"),("float", "left")]] [gameGrid (Signal.forwardTo address (always NoOp)) <|map missileIndicator log]
         ]
 
 
