@@ -160,7 +160,7 @@ view : (Address GameModelAction) -> GameModel -> Html.Html
 view address model =
   case model of
     Preparing prepareModel ->
-      let prepareHandler prepareModel action =
+      let prepareHandler action =
         let prepareModel = (updatePreparing action prepareModel)
             {placed, selected, orientation} = prepareModel
         in
@@ -168,7 +168,7 @@ view address model =
         else PrepareAction prepareModel
       in
       prepareView
-        (Signal.forwardTo address (prepareHandler prepareModel))
+        (Signal.forwardTo address prepareHandler)
         prepareModel
 
     Playing (ships, log) ->
