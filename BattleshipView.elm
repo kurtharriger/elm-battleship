@@ -1,9 +1,10 @@
-module Main where
+module BattleshipView where
 
 import Html exposing (div,text,img)
 import Html.Attributes exposing (style, src)
-import List exposing (map, map2, concatMap, append, concat)
+import List exposing (map, map2, concatMap, append, concat, length)
 import BattleshipModel exposing (..)
+import Signal exposing (Message, mailbox)
 
 
 squareSize : Int
@@ -82,6 +83,7 @@ positionStyles (i,j)  =
     ("height", squareSize |> px)
   ]
 
+
 gameSquare : GridPosition -> Html.Html
 gameSquare pos =
     div
@@ -96,13 +98,12 @@ gameSquare pos =
 
 
 gameGrid : List Html.Html -> Html.Html
-gameGrid children =
+gameGrid children  =
   div
     [
      style
      [
        ("position", "relative"),
-       ("margin", "50px"),
        ("width", (offset 11) |> px),
        ("height", (offset 11) |> px)
      ]
@@ -113,11 +114,11 @@ gameGrid children =
 --
 -- Test Rendering
 --
-
-missleIndicator (result, pos) =
-  let color = case result of
-    Miss -> "white"
-    Hit -> "red"
+missileIndicator : MissileResult -> Html.Html
+missileIndicator result =
+  let (color, pos) = case result of
+    Miss pos -> ("white", pos)
+    Hit pos -> ("red", pos)
   in
   div
     [
@@ -143,14 +144,38 @@ missleIndicator (result, pos) =
 
 
 view : GameModel -> Html.Html
-view (ships, log) =
-  div [ ]
-    [
-      div [ style [("float", "left")]] [gameGrid <| map ship ships],
-      div [ style [("float", "left")]] [gameGrid <| map missleIndicator log]
-    ]
+view model =
+  case model of
+    Preparing ships ->
+      div [ style []]
+        [
+          div [ style [("margin", "50px"),("float", "left")]] [gameGrid <| map ship ships],
+          div [ style [("margin", "50px"),("float", "left")]] [
+            text ("Click grid to place the " ++ (shipName <| nextShipToPlace ships))
+          ]
+        ]
+
+    Playing (ships, log) ->
+      div [ ]
+        [
+          div [ style [("margin", "50px"), ("float", "left")]] [gameGrid <| map ship ships],
+          div [ style [("margin", "50px"),("float", "left")]] [gameGrid <| map missileIndicator log]
+        ]
+
+nextShipToPlace : List ShipPlacement -> ShipType
+nextShipToPlace ships =
+  case (length ships) of
+    0 -> AircraftCarrier
+    1 -> Battleship
+    2 -> Cruiser
+    3 -> Submarine
+    _ -> Patrol
 
 
+
+--
+-- Example state for testing
+--
 
 ships : List ShipPlacement
 ships = [
@@ -161,13 +186,14 @@ ships = [
    (Patrol, (9,6), Horizontal)
   ]
 
-
-missleLog =
+missileLog : List MissileResult
+missileLog =
   [
-    (Hit, (1,2)),
-    (Miss, (3, 4)),
-    (Miss, (8, 2))
+    Hit (1,2),
+    Miss (3, 4),
+    Miss (8, 2)
   ]
 
 main : Html.Html
-main = view (ships, missleLog)
+main = view (Playing (ships, missileLog))
+-- main = view (Preparing [(AircraftCarrier, (1,1), Horizontal)])

@@ -23,11 +23,15 @@ type alias ShipPlacement
 
 
 type MissileResult
-  = Hit
-  | Miss
+  = Hit GridPosition
+  | Miss GridPosition
 
 
-type alias GameModel = (List ShipPlacement, List (MissileResult, GridPosition))
+type alias MissileLog = List MissileResult
+
+type GameModel
+  = Preparing (List ShipPlacement)
+  | Playing (List ShipPlacement, MissileLog)
 
 
 shipLength : ShipType -> Int
@@ -38,3 +42,13 @@ shipLength shipType =
       Submarine -> 3
       Cruiser -> 3
       Patrol -> 2
+
+
+shipName : ShipType -> String
+shipName shipType =
+  case shipType of
+    AircraftCarrier -> "Aircraft Carrier"
+    Battleship -> "Battleship"
+    Cruiser -> "Cruiser"
+    Submarine -> "Submarine"
+    Patrol -> "Patrol Boat"
