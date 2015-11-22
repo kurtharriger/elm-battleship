@@ -161,11 +161,11 @@ view address model =
   case model of
     Preparing prepareModel ->
       let prepareHandler action =
-        let prepareModel = (updatePreparing action prepareModel)
-            {placed, selected, orientation} = prepareModel
+        let newPrepareModel = (updatePreparing action prepareModel)
+            {placed, selected, orientation} = newPrepareModel
         in
         if (length placed) == 5 then PlayGame (placed, [])
-        else PrepareAction prepareModel
+        else PrepareAction newPrepareModel
       in
       prepareView
         (Signal.forwardTo address prepareHandler)
