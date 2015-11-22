@@ -31,14 +31,48 @@ type MissileResult
 type alias MissileLog = List MissileResult
 
 
+type alias PrepareModel = {
+    placed: List ShipPlacement,
+    selected: (ShipType, Orientation)
+  }
+
+
 type GameModel
-  = Preparing (List ShipPlacement)
+  = Preparing PrepareModel
   | Playing (List ShipPlacement, MissileLog)
 
 
-type PrepareAction
-  = PlaceShip ShipType GridPosition
-  | RotateShip
+type PrepareModelAction
+  = PrepareModelActionNoOp
+  | PlaceShip ShipType GridPosition
+
+
+type GameModelAction
+  = NoOp
+  | PrepareAction PrepareModelAction
+
+
+initPreparingModel : PrepareModel
+initPreparingModel  =
+  { placed = [],
+    selected = (AircraftCarrier, Horizontal)
+  }
+
+
+-- updatePreparing action model =
+--   case action of ->
+--     PlaceShip shipType gridPosition ->
+--       Preparing ()
+
+
+initModel : GameModel
+initModel = Preparing initPreparingModel
+
+
+updateGameModel : GameModelAction -> GameModel -> GameModel
+updateGameModel action model =
+  Debug.log (toString action)
+  model
 
 
 shipLength : ShipType -> Int

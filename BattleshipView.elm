@@ -145,15 +145,19 @@ missileIndicator result =
 
 
 
-view : GameModel -> Html.Html
-view  model =
+view : (Address GameModelAction) -> GameModel -> Html.Html
+view address model =
   case model of
-    Preparing ships ->
+    Preparing {placed,selected} ->
+
       div [ style []]
         [
-          div [ style [("margin", "50px"),("float", "left")]] [gameGrid doNothing (map ship ships)],
+          div [ style [("margin", "50px"),("float", "left")]]
+            [gameGrid
+              (Signal.forwardTo address (\a -> PrepareAction PrepareModelActionNoOp))
+              (map ship placed)],
           div [ style [("margin", "50px"),("float", "left")]] [
-            text ("Click grid to place the " ++ (shipName <| nextShipToPlace ships))
+            text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed))
           ]
         ]
 
@@ -197,6 +201,7 @@ missileLog =
     Miss (8, 2)
   ]
 
+
 main : Html.Html
 -- main = view (Playing (ships, missileLog))
-main = view (Preparing [(AircraftCarrier, (1,1), Horizontal)])
+main = view (mailbox NoOp).address (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
