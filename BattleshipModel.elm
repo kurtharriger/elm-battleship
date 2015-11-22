@@ -1,6 +1,6 @@
 module BattleshipModel where
 
-import List exposing ((::))
+import List exposing ((::), length)
 
 type ShipType
   = AircraftCarrier
@@ -37,10 +37,11 @@ type alias PrepareModel = {
     orientation: Orientation
   }
 
+type alias PlayModel = (List ShipPlacement, MissileLog)
 
 type GameModel
   = Preparing PrepareModel
-  | Playing (List ShipPlacement, MissileLog)
+  | Playing PlayModel
 
 
 type PrepareModelAction
@@ -50,6 +51,7 @@ type PrepareModelAction
 type GameModelAction
   = NoOp
   | PrepareAction PrepareModel
+  | PlayGame PlayModel
 
 
 initPreparingModel : PrepareModel
@@ -58,6 +60,16 @@ initPreparingModel  =
     selected = AircraftCarrier,
     orientation =  Horizontal
   }
+
+
+nextShipToPlace : List ShipPlacement -> ShipType
+nextShipToPlace ships =
+  case (length ships) of
+    0 -> AircraftCarrier
+    1 -> Battleship
+    2 -> Cruiser
+    3 -> Submarine
+    _ -> Patrol
 
 
 updatePreparing : PrepareModelAction -> PrepareModel -> PrepareModel
@@ -75,7 +87,9 @@ updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
   case action of
     PrepareAction prepareModel -> Preparing prepareModel
-    _ -> model
+    PlayGame playModel -> Playing playModel
+    NoOp -> model
+    
 
 shipLength : ShipType -> Int
 shipLength shipType =

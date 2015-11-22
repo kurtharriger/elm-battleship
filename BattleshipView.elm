@@ -160,8 +160,15 @@ view : (Address GameModelAction) -> GameModel -> Html.Html
 view address model =
   case model of
     Preparing prepareModel ->
+      let prepareHandler prepareModel action =
+        let prepareModel = (updatePreparing action prepareModel)
+            {placed, selected, orientation} = prepareModel
+        in
+        if (length placed) == 5 then PlayGame (placed, [])
+        else PrepareAction prepareModel
+      in
       prepareView
-        (Signal.forwardTo address (\action -> PrepareAction (updatePreparing action prepareModel)))
+        (Signal.forwardTo address (prepareHandler prepareModel))
         prepareModel
 
     Playing (ships, log) ->
@@ -170,17 +177,6 @@ view address model =
           div [ style [("margin", "50px"), ("float", "left")]] [gameGrid (Signal.forwardTo address (always NoOp)) <| map ship ships ],
           div [ style [("margin", "50px"),("float", "left")]] [gameGrid (Signal.forwardTo address (always NoOp)) <|map missileIndicator log]
         ]
-
-
-nextShipToPlace : List ShipPlacement -> ShipType
-nextShipToPlace ships =
-  case (length ships) of
-    0 -> AircraftCarrier
-    1 -> Battleship
-    2 -> Cruiser
-    3 -> Submarine
-    _ -> Patrol
-
 
 
 --
