@@ -1,5 +1,6 @@
 module BattleshipModel where
 
+import Signal exposing (Mailbox, Address, Message, mailbox)
 
 type ShipType
   = AircraftCarrier
@@ -29,9 +30,15 @@ type MissileResult
 
 type alias MissileLog = List MissileResult
 
+
 type GameModel
   = Preparing (List ShipPlacement)
   | Playing (List ShipPlacement, MissileLog)
+
+
+type PrepareAction
+  = PlaceShip ShipType GridPosition
+  | RotateShip
 
 
 shipLength : ShipType -> Int
@@ -52,3 +59,11 @@ shipName shipType =
     Cruiser -> "Cruiser"
     Submarine -> "Submarine"
     Patrol -> "Patrol Boat"
+
+
+nowhere : Signal.Mailbox (Maybe ())
+nowhere = (mailbox Nothing)
+
+
+doNothing : Address a
+doNothing = (Signal.forwardTo nowhere.address (always Nothing))

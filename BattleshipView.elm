@@ -2,9 +2,10 @@ module BattleshipView where
 
 import Html exposing (div,text,img)
 import Html.Attributes exposing (style, src)
+import Html.Events exposing (onClick)
 import List exposing (map, map2, concatMap, append, concat, length)
 import BattleshipModel exposing (..)
-import Signal exposing (Message, mailbox)
+import Signal exposing (Message, mailbox, Address)
 
 
 squareSize : Int
@@ -83,11 +84,11 @@ positionStyles (i,j)  =
     ("height", squareSize |> px)
   ]
 
-
-gameSquare : GridPosition -> Html.Html
-gameSquare pos =
+gameSquare : (Address GridPosition) -> GridPosition -> Html.Html
+gameSquare clickAddress pos  =
     div
     [
+      onClick clickAddress pos,
       style <|
         append (positionStyles pos)
         [
@@ -97,8 +98,8 @@ gameSquare pos =
     ] []
 
 
-gameGrid : List Html.Html -> Html.Html
-gameGrid children  =
+gameGrid : (Address GridPosition) -> List Html.Html ->  Html.Html
+gameGrid clickAddress children  =
   div
     [
      style
@@ -108,7 +109,7 @@ gameGrid children  =
        ("height", (offset 11) |> px)
      ]
     ]
-    (append (map gameSquare allPositions) children)
+    (append (map (gameSquare clickAddress) allPositions) children)
 
 
 --
@@ -143,13 +144,14 @@ missileIndicator result =
     ]
 
 
+
 view : GameModel -> Html.Html
-view model =
+view  model =
   case model of
     Preparing ships ->
       div [ style []]
         [
-          div [ style [("margin", "50px"),("float", "left")]] [gameGrid <| map ship ships],
+          div [ style [("margin", "50px"),("float", "left")]] [gameGrid doNothing (map ship ships)],
           div [ style [("margin", "50px"),("float", "left")]] [
             text ("Click grid to place the " ++ (shipName <| nextShipToPlace ships))
           ]
@@ -158,9 +160,10 @@ view model =
     Playing (ships, log) ->
       div [ ]
         [
-          div [ style [("margin", "50px"), ("float", "left")]] [gameGrid <| map ship ships],
-          div [ style [("margin", "50px"),("float", "left")]] [gameGrid <| map missileIndicator log]
+          div [ style [("margin", "50px"), ("float", "left")]] [gameGrid doNothing <| map ship ships ],
+          div [ style [("margin", "50px"),("float", "left")]] [gameGrid doNothing <|map missileIndicator log]
         ]
+
 
 nextShipToPlace : List ShipPlacement -> ShipType
 nextShipToPlace ships =
@@ -195,5 +198,5 @@ missileLog =
   ]
 
 main : Html.Html
-main = view (Playing (ships, missileLog))
--- main = view (Preparing [(AircraftCarrier, (1,1), Horizontal)])
+-- main = view (Playing (ships, missileLog))
+main = view (Preparing [(AircraftCarrier, (1,1), Horizontal)])
