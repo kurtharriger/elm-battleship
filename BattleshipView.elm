@@ -62,7 +62,7 @@ ship (shipType, position, orientation) =
   ] [
     div [transform orientation]
     [
-      img [src (shipImage shipType) ] []
+      img [src (shipImage shipType)] []
     ]
   ]
 
@@ -148,13 +148,13 @@ missileIndicator result =
 view : (Address GameModelAction) -> GameModel -> Html.Html
 view address model =
   case model of
-    Preparing {placed,selected} ->
+    Preparing {placed,selected,orientation} ->
 
       div [ style []]
         [
           div [ style [("margin", "50px"),("float", "left")]]
             [gameGrid
-              (Signal.forwardTo address (\a -> PrepareAction PrepareModelActionNoOp))
+              (Signal.forwardTo address (\pos -> PrepareAction (PlaceShip selected orientation pos)))
               (map ship placed)],
           div [ style [("margin", "50px"),("float", "left")]] [
             text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed))
@@ -203,5 +203,5 @@ missileLog =
 
 
 main : Html.Html
--- main = view (Playing (ships, missileLog))
-main = view (mailbox NoOp).address (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
+main = view (mailbox NoOp).address (Playing (ships, missileLog))
+-- main = view (mailbox NoOp).address (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})

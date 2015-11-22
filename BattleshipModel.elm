@@ -1,6 +1,6 @@
 module BattleshipModel where
 
-import Signal exposing (Mailbox, Address, Message, mailbox)
+import List exposing ((::))
 
 type ShipType
   = AircraftCarrier
@@ -33,7 +33,8 @@ type alias MissileLog = List MissileResult
 
 type alias PrepareModel = {
     placed: List ShipPlacement,
-    selected: (ShipType, Orientation)
+    selected: ShipType,
+    orientation: Orientation
   }
 
 
@@ -43,8 +44,7 @@ type GameModel
 
 
 type PrepareModelAction
-  = PrepareModelActionNoOp
-  | PlaceShip ShipType GridPosition
+  = PlaceShip ShipType Orientation GridPosition
 
 
 type GameModelAction
@@ -55,14 +55,16 @@ type GameModelAction
 initPreparingModel : PrepareModel
 initPreparingModel  =
   { placed = [],
-    selected = (AircraftCarrier, Horizontal)
+    selected = AircraftCarrier,
+    orientation =  Horizontal
   }
 
 
--- updatePreparing action model =
---   case action of ->
---     PlaceShip shipType gridPosition ->
---       Preparing ()
+updatePreparing : PrepareModelAction -> PrepareModel -> PrepareModel
+updatePreparing action model =
+  case action of
+    PlaceShip shipType orientation gridPosition ->
+      { model | placed = (shipType, gridPosition, orientation) :: model.placed }
 
 
 initModel : GameModel
@@ -71,8 +73,13 @@ initModel = Preparing initPreparingModel
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
-  Debug.log (toString action)
-  model
+  case (action, model) of
+    (NoOp, _) -> model
+    (PrepareAction prepareModelAction, Preparing prepareModel) ->
+      Preparing (updatePreparing prepareModelAction prepareModel)
+    _ ->
+      Debug.log ("illegal action " ++ (toString action) ++ " on " ++ (toString model))
+      model
 
 
 shipLength : ShipType -> Int
@@ -93,11 +100,3 @@ shipName shipType =
     Cruiser -> "Cruiser"
     Submarine -> "Submarine"
     Patrol -> "Patrol Boat"
-
-
-nowhere : Signal.Mailbox (Maybe ())
-nowhere = (mailbox Nothing)
-
-
-doNothing : Address a
-doNothing = (Signal.forwardTo nowhere.address (always Nothing))
