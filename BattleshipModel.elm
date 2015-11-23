@@ -33,8 +33,7 @@ type alias MissileLog = List MissileResult
 
 type alias PrepareModel = {
     placed: List ShipPlacement,
-    selected: ShipType,
-    orientation: Orientation
+    selected: Maybe (ShipType, Orientation)
   }
 
 type alias PlayModel = (List ShipPlacement, MissileLog)
@@ -46,6 +45,8 @@ type GameModel
 
 type PrepareModelAction
   = PlaceShip ShipType Orientation GridPosition
+  | SelectShip ShipType Orientation
+  | PrepareNoOp
 
 
 type GameModelAction
@@ -57,8 +58,7 @@ type GameModelAction
 initPreparingModel : PrepareModel
 initPreparingModel  =
   { placed = [],
-    selected = AircraftCarrier,
-    orientation =  Horizontal
+    selected = Nothing
   }
 
 
@@ -77,6 +77,9 @@ updatePreparing action model =
   case action of
     PlaceShip shipType orientation gridPosition ->
       { model | placed = (shipType, gridPosition, orientation) :: model.placed }
+    SelectShip shipType orientation ->
+      { model | selected = Just (shipType, orientation) }
+    PrepareNoOp -> model
 
 
 initModel : GameModel
@@ -89,7 +92,7 @@ updateGameModel action model =
     PrepareAction prepareModel -> Preparing prepareModel
     PlayGame playModel -> Playing playModel
     NoOp -> model
-    
+
 
 shipLength : ShipType -> Int
 shipLength shipType =

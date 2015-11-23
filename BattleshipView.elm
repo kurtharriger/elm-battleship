@@ -129,7 +129,6 @@ missileIndicator result =
       div
       [
         style <|
-
           [
             ("width", 20 |> px),
             ("height", 20 |> px),
@@ -143,16 +142,50 @@ missileIndicator result =
       ] []
     ]
 
+draggableShip : Address PrepareModelAction -> ShipType -> Orientation -> Maybe (ShipType, Orientation)-> Html.Html
+draggableShip address shipType orientation selected =
+  let highlight =
+    case selected of
+      Just (selectedShipType, selectedOrientation) ->
+        if selectedShipType == shipType && selectedOrientation == orientation then ("border", "1px dashed blue")
+        else ("border", "none")
+      _ -> ("border", "none")
+  in
+  div [style [("float","left"), highlight]] [
+    div [ transform orientation ] [
+     img [src (shipImage shipType),
+          onClick (Signal.forwardTo address identity) (SelectShip shipType orientation)] []
+    ]
+  ]
+
 prepareView : Address PrepareModelAction -> PrepareModel -> Html.Html
-prepareView address {placed, selected, orientation} =
+prepareView address {placed, selected} =
+  let clickHandler gridPosition =
+        case selected of
+          Just (selected, orientation) -> PlaceShip selected orientation gridPosition
+          Nothing -> PrepareNoOp
+  in
   div [ style []]
     [
-      div [ style [("margin", "50px"),("float", "left")]]
-        [gameGrid
-          (Signal.forwardTo address (\pos -> PlaceShip selected orientation pos))
-          (map ship placed)],
-      div [ style [("margin", "50px"),("float", "left")]] [
-        text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed))
+      div [ style [("margin", "50px"),("float", "left")] ] [
+        gameGrid (Signal.forwardTo address clickHandler) (map ship placed)
+      ],
+      div [ style [("margin", "50px"), ("float", "left")] ] [
+        text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed)),
+        div [style [("height", "100px")]] [
+          draggableShip address AircraftCarrier Horizontal selected,
+          draggableShip address Battleship Horizontal selected,
+          draggableShip address Cruiser Horizontal selected,
+          draggableShip address Submarine Horizontal selected,
+          draggableShip address Patrol Horizontal selected
+        ],
+        div [] [
+          draggableShip address AircraftCarrier Vertical selected,
+          draggableShip address Battleship Vertical selected,
+          draggableShip address Cruiser Vertical selected,
+          draggableShip address Submarine Vertical selected,
+          draggableShip address Patrol Vertical selected
+        ]
       ]
     ]
 
@@ -162,7 +195,7 @@ view address model =
     Preparing prepareModel ->
       let prepareHandler action =
         let newPrepareModel = (updatePreparing action prepareModel)
-            {placed, selected, orientation} = newPrepareModel
+            {placed} = newPrepareModel
         in
         if (length placed) == 5 then PlayGame (placed, [])
         else PrepareAction newPrepareModel
