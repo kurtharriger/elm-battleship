@@ -20,127 +20,114 @@ px : Int -> String
 px x = (toString x) ++ "px"
 
 
-transform : Orientation -> Html.Attribute
-transform orientation =
-  case orientation of
-    Horizontal -> style []
-    Vertical -> style [("transform", "rotate(90deg)")]
+shipImageSrc : ShipType -> Orientation -> String
+shipImageSrc shipType orientation =
+  case (shipType, orientation) of
+    (AircraftCarrier, Horizontal) -> "img/AircraftCarrier.png"
+    (Battleship, Horizontal) -> "img/Battleship.png"
+    (Cruiser, Horizontal) -> "img/Cruiser.png"
+    (Submarine, Horizontal) -> "img/Submarine.png"
+    (Patrol, Horizontal) -> "img/PatrolBoat.png"
+    (AircraftCarrier, Vertical) -> "img/AircraftCarrierVertical.png"
+    (Battleship, Vertical) -> "img/BattleshipVertical.png"
+    (Cruiser, Vertical) -> "img/CruiserVertical.png"
+    (Submarine, Vertical) -> "img/SubmarineVertical.png"
+    (Patrol, Vertical) -> "img/PatrolBoatVertical.png"
 
+shipImg : ShipType -> Orientation -> List Html.Attribute -> Html.Html
+shipImg  shipType orientation attributes =
+  img (attributes `append` [src <| shipImageSrc shipType orientation]) []
 
-shipImage : ShipType -> String
-shipImage shipType =
-  case shipType of
-    AircraftCarrier -> "img/AircraftCarrier.png"
-    Battleship -> "img/Battleship.png"
-    Cruiser -> "img/Cruiser.png"
-    Submarine -> "img/Submarine.png"
-    Patrol -> "img/PatrolBoat.png"
+type alias Style = (String, String)
 
-
-shipEndPos : ShipType -> GridPosition -> Orientation -> GridPosition
-shipEndPos shipType position orientation =
-  let (x,y) = position
-  in
-  case orientation of
-    Horizontal -> (x + shipLength shipType, y + 1)
-    Vertical -> (x + 1, y + shipLength shipType )
-
+gridPositioned : GridPosition -> List Style
+gridPositioned (x,y) =
+  [
+    ("position", "absolute"),
+    ("top", offset x |> px),
+    ("left", offset y |> px)
+  ]
 
 ship : (ShipType, GridPosition, Orientation) -> Html.Html
 ship (shipType, position, orientation) =
-  let (x,y) = position
-      (x2,y2) = shipEndPos shipType position orientation
-  in
-  div [
-    style [
-      ("width", (offset x2) - (offset x) |> px),
-      ("height", (offset y2) - (offset y) |> px),
-      ("position", "absolute"),
-      ("top", offset x |> px),
-      ("left", offset y |> px)
-    ]
-  ] [
-    div [transform orientation]
-    [
-      img [src (shipImage shipType)] []
-    ]
-  ]
+  shipImg shipType orientation [style <| gridPositioned position]
 
 
 allPositions : List GridPosition
 allPositions =
-  [0..10]
-  |> concatMap (\i -> [0..10]
+  [0..9]
+  |> concatMap (\i -> [0..9]
   |> map (\j -> (i,j)))
 
 
-positionStyles : GridPosition -> List (String, String)
-positionStyles (i,j)  =
-  [
-    ("position", "absolute"),
-    ("top", offset i |> px),
-    ("left", offset j |> px),
-    ("width", squareSize |> px),
-    ("height", squareSize |> px)
-  ]
+type GridAction
+  = Click GridPosition
+  | Drop GridPosition
 
-gameSquare : (Address GridPosition) -> GridPosition -> Html.Html
-gameSquare clickAddress pos  =
+gameSquare : {address: Address GridAction, dropTarget: Bool} -> GridPosition -> Html.Html
+gameSquare {address,dropTarget} pos  =
     div
     [
-      onClick clickAddress pos,
-      style <|
-        append (positionStyles pos)
-        [
-          ("border","1px solid black"),
-          ("background-color", "blue")
-        ]
+      onClick address (Click pos),
+      style
+        <| gridPositioned pos
+          `append`
+          [
+            ("width", squareSize |> px),
+            ("height", squareSize |> px),
+            ("border","1px solid black"),
+            ("background-color", "blue")
+          ]
     ] []
 
 
-gameGrid : (Address GridPosition) -> List Html.Html ->  Html.Html
-gameGrid clickAddress children  =
+type alias GameGridModel = {
+  address: Address GridAction,
+  styles: List (String, String),
+  content: List Html.Html,
+  dropTarget: Bool
+}
+
+gameGrid : GameGridModel ->  Html.Html
+gameGrid {address, styles, dropTarget, content}  =
   div
     [
-     style
-     [
+    style (styles `append` [
        ("position", "relative"),
-       ("width", (offset 11) |> px),
-       ("height", (offset 11) |> px)
-     ]
+       ("width", (squareSize * 10) |> px),
+       ("height", (squareSize * 10) |> px)
+     ])
     ]
-    (append (map (gameSquare clickAddress) allPositions) children)
+    (append (map (gameSquare {address = address, dropTarget = dropTarget}) allPositions) content)
 
 
---
--- Test Rendering
---
 missileIndicator : MissileResult -> Html.Html
 missileIndicator result =
   let (color, pos) = case result of
     Miss pos -> ("white", pos)
     Hit pos -> ("red", pos)
   in
-  div
-    [
-      style <| positionStyles pos
-    ]
-    [
-      div
-      [
-        style <|
-          [
-            ("width", 20 |> px),
-            ("height", 20 |> px),
-            ("position", "relative"),
-            ("left", "50%"),
-            ("top", "50%"),
-            ("margin", "-10px 0 0 -10px"),
-            ("background-color", color),
-            ("border-radius", "10px")
-          ]
-      ] []
-    ]
+  div [
+    style ((gridPositioned pos) `append` [
+      ("width", squareSize |> px),
+      ("height", squareSize |> px)
+    ])
+  ]
+  [
+    div [
+      style [
+        ("width", 20 |> px),
+        ("height", 20 |> px),
+        ("position", "relative"),
+        ("left", "50%"),
+        ("top", "50%"),
+        ("margin", "-10px 0 0 -10px"),
+        ("background-color", color),
+        ("border-radius", "10px")
+      ]
+    ] []
+  ]
+
 
 draggableShip : Address PrepareModelAction -> ShipType -> Orientation -> Maybe (ShipType, Orientation)-> Html.Html
 draggableShip address shipType orientation selected =
@@ -152,23 +139,33 @@ draggableShip address shipType orientation selected =
       _ -> ("border", "none")
   in
   div [style [("float","left"), highlight]] [
-    div [ transform orientation ] [
-     img [src (shipImage shipType),
-          onClick (Signal.forwardTo address identity) (SelectShip shipType orientation)] []
+    shipImg shipType orientation [
+      onClick (Signal.forwardTo address identity) (SelectShip shipType orientation)
     ]
   ]
 
-prepareView : Address PrepareModelAction -> PrepareModel -> Html.Html
-prepareView address {placed, selected} =
-  let clickHandler gridPosition =
+
+prepareView :  PrepareModel -> Html.Html
+prepareView {address, placed, selected} =
+  let clickHandler action =
+      let gridPosition =
+        case action of
+          Click gridPosition -> gridPosition
+          Drop gridPosition -> gridPosition
+      in
         case selected of
           Just (selected, orientation) -> PlaceShip selected orientation gridPosition
           Nothing -> PrepareNoOp
   in
   div [ style []]
     [
-      div [ style [("margin", "50px"),("float", "left")] ] [
-        gameGrid (Signal.forwardTo address clickHandler) (map ship placed)
+      div [ style [] ] [
+        gameGrid {
+          address = (Signal.forwardTo address clickHandler),
+          dropTarget = True,
+          styles = [("margin", "50px"),("float", "left")],
+          content = (map ship placed)
+        }
       ],
       div [ style [("margin", "50px"), ("float", "left")] ] [
         text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed)),
@@ -189,6 +186,7 @@ prepareView address {placed, selected} =
       ]
     ]
 
+
 view : (Address GameModelAction) -> GameModel -> Html.Html
 view address model =
   case model of
@@ -200,16 +198,27 @@ view address model =
         if (length placed) == 5 then PlayGame (placed, [])
         else PrepareAction newPrepareModel
       in
-      prepareView
-        (Signal.forwardTo address prepareHandler)
-        prepareModel
+      prepareView { prepareModel |
+        address = (Signal.forwardTo address prepareHandler)
+      }
+
 
     Playing (ships, log) ->
       div [ ]
-        [
-          div [ style [("margin", "50px"), ("float", "left")]] [gameGrid (Signal.forwardTo address (always NoOp)) <| map ship ships ],
-          div [ style [("margin", "50px"),("float", "left")]] [gameGrid (Signal.forwardTo address (always NoOp)) <|map missileIndicator log]
-        ]
+      [
+        gameGrid {
+          address = (Signal.forwardTo address (always NoOp)),
+          dropTarget = False,
+          styles = [("margin", "50px"),("float", "left")],
+          content = (map ship ships)
+        },
+        gameGrid {
+          address = (Signal.forwardTo address (always NoOp)),
+          dropTarget = False,
+          styles = [("margin", "50px"),("float", "left")],
+          content = (map missileIndicator log)
+        }
+      ]
 
 
 --
@@ -235,5 +244,5 @@ missileLog =
 
 
 main : Html.Html
-main = view (mailbox NoOp).address (Playing (ships, missileLog))
--- main = view (mailbox NoOp).address (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
+-- main = view (mailbox NoOp).address (Playing (ships, missileLog))
+main = view (mailbox NoOp).address (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})

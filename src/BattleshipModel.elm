@@ -1,6 +1,7 @@
 module BattleshipModel where
 
 import List exposing ((::), length)
+import Signal exposing (Address, mailbox)
 
 type ShipType
   = AircraftCarrier
@@ -32,6 +33,7 @@ type alias MissileLog = List MissileResult
 
 
 type alias PrepareModel = {
+    address: Address PrepareModelAction,
     placed: List ShipPlacement,
     selected: Maybe (ShipType, Orientation)
   }
@@ -57,7 +59,8 @@ type GameModelAction
 
 initPreparingModel : PrepareModel
 initPreparingModel  =
-  { placed = [],
+  { address = (mailbox PrepareNoOp).address,
+    placed = [],
     selected = Nothing
   }
 
