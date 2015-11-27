@@ -1,7 +1,6 @@
 module BattleshipModel where
 
 import List exposing ((::), length)
-import Signal exposing (Address, mailbox)
 
 type ShipType
   = AircraftCarrier
@@ -33,33 +32,38 @@ type alias MissileLog = List MissileResult
 
 
 type alias PrepareModel = {
-    address: Address PrepareModelAction,
     placed: List ShipPlacement,
     selected: Maybe (ShipType, Orientation)
   }
 
-type alias PlayModel = (List ShipPlacement, MissileLog)
+type alias PlayModel = {
+  setup: List ShipPlacement,
+  missileLog: MissileLog
+}
 
 type GameModel
   = Preparing PrepareModel
   | Playing PlayModel
 
 
-type PrepareModelAction
+type PrepareAction
   = PlaceShip ShipType Orientation GridPosition
   | SelectShip ShipType Orientation
   | PrepareNoOp
 
+type PlayAction
+  = Fire GridPosition
 
 type GameModelAction
   = NoOp
-  | PrepareAction PrepareModel
-  | PlayGame PlayModel
+  | Prepare PrepareAction
+  | PlayGame (List ShipPlacement)
+  | Play (Maybe PlayAction)
 
 
 initPreparingModel : PrepareModel
 initPreparingModel  =
-  { address = (mailbox PrepareNoOp).address,
+  {
     placed = [],
     selected = Nothing
   }
@@ -75,7 +79,7 @@ nextShipToPlace ships =
     _ -> Patrol
 
 
-updatePreparing : PrepareModelAction -> PrepareModel -> PrepareModel
+updatePreparing : PrepareAction -> PrepareModel -> PrepareModel
 updatePreparing action model =
   case action of
     PlaceShip shipType orientation gridPosition ->
@@ -91,10 +95,16 @@ initModel = Preparing initPreparingModel
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
-  case action of
-    PrepareAction prepareModel -> Preparing prepareModel
-    PlayGame playModel -> Playing playModel
-    NoOp -> model
+  case (model, action) of
+    (Preparing prepareModel, Prepare prepareAction) ->
+      let newModel = (updatePreparing prepareAction prepareModel)
+      in
+      if (length newModel.placed) == 5 then
+        updateGameModel (PlayGame newModel.placed) model
+      else Preparing newModel
+    (_, PlayGame setup) ->
+      Playing {setup = setup, missileLog = []}
+    _ -> model
 
 
 shipLength : ShipType -> Int

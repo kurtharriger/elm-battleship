@@ -129,7 +129,7 @@ missileIndicator result =
   ]
 
 
-draggableShip : Address PrepareModelAction -> ShipType -> Orientation -> Maybe (ShipType, Orientation)-> Html.Html
+draggableShip : Address PrepareAction -> ShipType -> Orientation -> Maybe (ShipType, Orientation)-> Html.Html
 draggableShip address shipType orientation selected =
   let highlight =
     case selected of
@@ -145,8 +145,9 @@ draggableShip address shipType orientation selected =
   ]
 
 
-prepareView :  PrepareModel -> Html.Html
-prepareView {address, placed, selected} =
+
+prepareView :  Address PrepareAction -> PrepareModel -> Html.Html
+prepareView address {placed, selected} =
   let clickHandler action =
       let gridPosition =
         case action of
@@ -186,39 +187,38 @@ prepareView {address, placed, selected} =
       ]
     ]
 
+playView : (Address (Maybe PlayAction)) -> PlayModel -> Html.Html
+playView address {setup, missileLog} =
+  let nowhere = (mailbox ()).address
+      clickHandler action =
+        case action of
+          Click pos -> Just (Fire pos)
+          _ -> Nothing
+  in
+  div [ ]
+  [
+    gameGrid {
+      address = (Signal.forwardTo nowhere (always ())),
+      dropTarget = False,
+      styles = [("margin", "50px"),("float", "left")],
+      content = (map ship setup)
+    },
+    gameGrid {
+      address = (Signal.forwardTo address clickHandler),
+      dropTarget = False,
+      styles = [("margin", "50px"),("float", "left")],
+      content = (map missileIndicator missileLog)
+    }
+  ]
 
 view : (Address GameModelAction) -> GameModel -> Html.Html
 view address model =
   case model of
     Preparing prepareModel ->
-      let prepareHandler action =
-        let newPrepareModel = (updatePreparing action prepareModel)
-            {placed} = newPrepareModel
-        in
-        if (length placed) == 5 then PlayGame (placed, [])
-        else PrepareAction newPrepareModel
-      in
-      prepareView { prepareModel |
-        address = (Signal.forwardTo address prepareHandler)
-      }
+      prepareView (Signal.forwardTo address Prepare) prepareModel
 
-
-    Playing (ships, log) ->
-      div [ ]
-      [
-        gameGrid {
-          address = (Signal.forwardTo address (always NoOp)),
-          dropTarget = False,
-          styles = [("margin", "50px"),("float", "left")],
-          content = (map ship ships)
-        },
-        gameGrid {
-          address = (Signal.forwardTo address (always NoOp)),
-          dropTarget = False,
-          styles = [("margin", "50px"),("float", "left")],
-          content = (map missileIndicator log)
-        }
-      ]
+    Playing playModel ->
+      playView (Signal.forwardTo address Play) playModel
 
 
 --
