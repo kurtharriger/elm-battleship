@@ -170,8 +170,8 @@ prepareView dispatch {placed, selected} =
   let
     gridMessage gridAction =
       case (selected, gridAction) of
-        (Just (shipType, orientation), Click gridPosition) -> dispatch (PlaceShip shipType orientation gridPosition)
-        (Just (shipType, orientation), Drop gridPosition) -> dispatch (PlaceShip shipType orientation gridPosition)
+        (Just (shipType, orientation), Click gridPosition) -> dispatch (PlaceShip (shipType, gridPosition, orientation))
+        (Just (shipType, orientation), Drop gridPosition) -> dispatch (PlaceShip (shipType, gridPosition, orientation))
         _ -> discard ()
   in
   div [ style []]

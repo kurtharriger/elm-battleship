@@ -1,6 +1,6 @@
 module BattleshipModel where
 
-import List exposing ((::), length)
+import List exposing ((::), length, map, any)
 import Signal exposing (Mailbox, Message, mailbox)
 
 type ShipType
@@ -48,7 +48,7 @@ type GameModel
 
 
 type PrepareAction
-  = PlaceShip ShipType Orientation GridPosition
+  = PlaceShip ShipPlacement
   | SelectShip ShipType Orientation
 
 type PlayAction
@@ -79,11 +79,43 @@ nextShipToPlace ships =
     _ -> Patrol
 
 
+getShipPositions : ShipPlacement -> Maybe (List GridPosition)
+getShipPositions (shipType, (x,y), orientation) =
+  case orientation of
+      Vertical ->
+        let end = x + (shipLength shipType) - 1
+        in
+        if end >= 10 then Nothing
+        else Just <| map (\i -> (i,y)) [x..end]
+      Horizontal ->
+        let end = y + (shipLength shipType) - 1
+        in
+        if end >= 10 then Nothing
+        else Just <| map (\i -> (x,i)) [y..end]
+
+hitShip : ShipPlacement -> GridPosition -> Bool
+hitShip placement pos =
+  case getShipPositions placement of
+    Just positions -> any ((==) pos) positions
+    _ -> False
+
+canPlaceShip : List ShipPlacement -> ShipPlacement -> Bool
+canPlaceShip placed placement =
+  case getShipPositions placement of
+    Nothing -> False
+    Just positions ->
+      not (any (\placement ->
+         (any (hitShip placement) positions)
+        ) placed)
+
+
 updatePreparing : PrepareAction -> PrepareModel -> PrepareModel
 updatePreparing action model =
   case action of
-    PlaceShip shipType orientation gridPosition ->
-      { model | placed = (shipType, gridPosition, orientation) :: model.placed }
+    PlaceShip placement ->
+      if canPlaceShip model.placed placement then
+        { model | placed = placement :: model.placed }
+      else model
     SelectShip shipType orientation ->
       { model | selected = Just (shipType, orientation) }
 
