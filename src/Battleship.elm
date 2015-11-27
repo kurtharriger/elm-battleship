@@ -11,12 +11,13 @@ gameMailbox = mailbox NoOp
 gameDispatcher : (GameModelAction -> Message)
 gameDispatcher = message gameMailbox.address
 
-debugGameDispatcher m =
-  gameDispatcher (Debug.log "message" m)
-
 state : Signal GameModelAction -> Signal GameModel
 state = foldp updateGameModel initModel
 
+logging : Signal a -> Signal a
+logging =
+  Signal.map (Debug.log "signal")
+
 main : Signal Html.Html
 main =
-  Signal.map (view debugGameDispatcher) (state gameMailbox.signal)
+  Signal.map (view gameDispatcher) ((logging >> state) gameMailbox.signal)

@@ -73,7 +73,7 @@ gameSquare : {dispatch: (GridAction -> Message), dropTarget: Bool} -> GridPositi
 gameSquare {dispatch,dropTarget} pos  =
     div
     [
-      onClick (\_ -> (dispatch (Click pos))),
+      onClick (always (dispatch (Click pos))),
       style
         <| gridPositioned pos
           `append`
