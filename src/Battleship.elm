@@ -12,7 +12,7 @@ gameDispatcher : (GameModelAction -> Message)
 gameDispatcher = message gameMailbox.address
 
 state : Signal GameModelAction -> Signal GameModel
-state = foldp updateGameModel initModel
+state = Debug.watch "state" <| foldp updateGameModel initModel
 
 logging : Signal a -> Signal a
 logging =

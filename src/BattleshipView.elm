@@ -2,7 +2,7 @@ module BattleshipView where
 
 import Html exposing (div,text,img)
 import Html.Attributes exposing (style, src)
-import Html.Events exposing (on)
+import Html.Events exposing (on, onWithOptions)
 import List exposing (map, map2, concatMap, append, concat, length)
 import BattleshipModel exposing (..)
 import Signal exposing (Message, mailbox, Address)
@@ -69,11 +69,26 @@ onClick : (() -> Message) -> Html.Attribute
 onClick =
   on "click" (Json.Decode.succeed ())
 
+onDragOver : (() -> Message) -> Html.Attribute
+onDragOver =
+  onWithOptions "dragover" {preventDefault = True, stopPropagation = False} (Json.Decode.succeed ())
+
+onDrop : (() -> Message) -> Html.Attribute
+onDrop =
+  on "drop" (Json.Decode.succeed ())
+
+onDragStart : (() -> Message) -> Html.Attribute
+onDragStart =
+  on "dragstart" (Json.Decode.succeed ())
+
+
 gameSquare : {dispatch: (GridAction -> Message), dropTarget: Bool} -> GridPosition -> Html.Html
 gameSquare {dispatch,dropTarget} pos  =
     div
     [
       onClick (always (dispatch (Click pos))),
+      onDragOver discard,
+      onDrop (always (dispatch (Drop pos))),
       style
         <| gridPositioned pos
           `append`
@@ -144,7 +159,8 @@ draggableShip dispatch shipType orientation selected =
   in
   div [style [("float","left"), highlight]] [
     shipImg shipType orientation [
-      onClick (\_ -> dispatch (SelectShip shipType orientation))
+      onClick (always (dispatch (SelectShip shipType orientation))),
+      onDragStart (always (dispatch (SelectShip shipType orientation)))
     ]
   ]
 
