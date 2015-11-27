@@ -1,6 +1,7 @@
 module BattleshipModel where
 
 import List exposing ((::), length)
+import Signal exposing (Mailbox, Message, mailbox)
 
 type ShipType
   = AircraftCarrier
@@ -49,16 +50,15 @@ type GameModel
 type PrepareAction
   = PlaceShip ShipType Orientation GridPosition
   | SelectShip ShipType Orientation
-  | PrepareNoOp
 
 type PlayAction
   = Fire GridPosition
 
 type GameModelAction
-  = NoOp
-  | Prepare PrepareAction
+  = Prepare PrepareAction
   | PlayGame (List ShipPlacement)
-  | Play (Maybe PlayAction)
+  | Play PlayAction
+  | NoOp
 
 
 initPreparingModel : PrepareModel
@@ -86,7 +86,6 @@ updatePreparing action model =
       { model | placed = (shipType, gridPosition, orientation) :: model.placed }
     SelectShip shipType orientation ->
       { model | selected = Just (shipType, orientation) }
-    PrepareNoOp -> model
 
 
 initModel : GameModel
@@ -125,3 +124,13 @@ shipName shipType =
     Cruiser -> "Cruiser"
     Submarine -> "Submarine"
     Patrol -> "Patrol Boat"
+
+
+
+nowhere : Mailbox ()
+nowhere = mailbox ()
+
+
+discard : (a -> Message)
+discard a =
+  Signal.message nowhere.address ()

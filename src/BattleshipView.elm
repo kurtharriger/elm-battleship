@@ -2,10 +2,11 @@ module BattleshipView where
 
 import Html exposing (div,text,img)
 import Html.Attributes exposing (style, src)
-import Html.Events exposing (onClick)
+import Html.Events exposing (on)
 import List exposing (map, map2, concatMap, append, concat, length)
 import BattleshipModel exposing (..)
 import Signal exposing (Message, mailbox, Address)
+import Json.Decode
 
 
 squareSize : Int
@@ -64,11 +65,15 @@ type GridAction
   = Click GridPosition
   | Drop GridPosition
 
-gameSquare : {address: Address GridAction, dropTarget: Bool} -> GridPosition -> Html.Html
-gameSquare {address,dropTarget} pos  =
+onClick : (() -> Message) -> Html.Attribute
+onClick =
+  on "click" (Json.Decode.succeed ())
+
+gameSquare : {dispatch: (GridAction -> Message), dropTarget: Bool} -> GridPosition -> Html.Html
+gameSquare {dispatch,dropTarget} pos  =
     div
     [
-      onClick address (Click pos),
+      onClick (\_ -> (dispatch (Click pos))),
       style
         <| gridPositioned pos
           `append`
@@ -82,14 +87,13 @@ gameSquare {address,dropTarget} pos  =
 
 
 type alias GameGridModel = {
-  address: Address GridAction,
   styles: List (String, String),
   content: List Html.Html,
   dropTarget: Bool
 }
 
-gameGrid : GameGridModel ->  Html.Html
-gameGrid {address, styles, dropTarget, content}  =
+gameGrid : (GridAction -> Message) -> GameGridModel ->  Html.Html
+gameGrid dispatch {styles, dropTarget, content}  =
   div
     [
     style (styles `append` [
@@ -98,7 +102,7 @@ gameGrid {address, styles, dropTarget, content}  =
        ("height", (squareSize * 10) |> px)
      ])
     ]
-    (append (map (gameSquare {address = address, dropTarget = dropTarget}) allPositions) content)
+    (append (map (gameSquare {dispatch = dispatch, dropTarget = dropTarget}) allPositions) content)
 
 
 missileIndicator : MissileResult -> Html.Html
@@ -129,8 +133,8 @@ missileIndicator result =
   ]
 
 
-draggableShip : Address PrepareAction -> ShipType -> Orientation -> Maybe (ShipType, Orientation)-> Html.Html
-draggableShip address shipType orientation selected =
+draggableShip : (PrepareAction -> Message) -> ShipType -> Orientation -> Maybe (ShipType, Orientation)-> Html.Html
+draggableShip dispatch shipType orientation selected =
   let highlight =
     case selected of
       Just (selectedShipType, selectedOrientation) ->
@@ -140,29 +144,24 @@ draggableShip address shipType orientation selected =
   in
   div [style [("float","left"), highlight]] [
     shipImg shipType orientation [
-      onClick (Signal.forwardTo address identity) (SelectShip shipType orientation)
+      onClick (\_ -> dispatch (SelectShip shipType orientation))
     ]
   ]
 
 
-
-prepareView :  Address PrepareAction -> PrepareModel -> Html.Html
-prepareView address {placed, selected} =
-  let clickHandler action =
-      let gridPosition =
-        case action of
-          Click gridPosition -> gridPosition
-          Drop gridPosition -> gridPosition
-      in
-        case selected of
-          Just (selected, orientation) -> PlaceShip selected orientation gridPosition
-          Nothing -> PrepareNoOp
+prepareView : (PrepareAction -> Message) -> PrepareModel -> Html.Html
+prepareView dispatch {placed, selected} =
+  let
+    gridMessage gridAction =
+      case (selected, gridAction) of
+        (Just (shipType, orientation), Click gridPosition) -> dispatch (PlaceShip shipType orientation gridPosition)
+        (Just (shipType, orientation), Drop gridPosition) -> dispatch (PlaceShip shipType orientation gridPosition)
+        _ -> discard ()
   in
   div [ style []]
     [
       div [ style [] ] [
-        gameGrid {
-          address = (Signal.forwardTo address clickHandler),
+        gameGrid gridMessage {
           dropTarget = True,
           styles = [("margin", "50px"),("float", "left")],
           content = (map ship placed)
@@ -171,54 +170,51 @@ prepareView address {placed, selected} =
       div [ style [("margin", "50px"), ("float", "left")] ] [
         text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed)),
         div [style [("height", "100px")]] [
-          draggableShip address AircraftCarrier Horizontal selected,
-          draggableShip address Battleship Horizontal selected,
-          draggableShip address Cruiser Horizontal selected,
-          draggableShip address Submarine Horizontal selected,
-          draggableShip address Patrol Horizontal selected
+          draggableShip dispatch AircraftCarrier Horizontal selected,
+          draggableShip dispatch Battleship Horizontal selected,
+          draggableShip dispatch Cruiser Horizontal selected,
+          draggableShip dispatch Submarine Horizontal selected,
+          draggableShip dispatch Patrol Horizontal selected
         ],
         div [] [
-          draggableShip address AircraftCarrier Vertical selected,
-          draggableShip address Battleship Vertical selected,
-          draggableShip address Cruiser Vertical selected,
-          draggableShip address Submarine Vertical selected,
-          draggableShip address Patrol Vertical selected
+          draggableShip dispatch AircraftCarrier Vertical selected,
+          draggableShip dispatch Battleship Vertical selected,
+          draggableShip dispatch Cruiser Vertical selected,
+          draggableShip dispatch Submarine Vertical selected,
+          draggableShip dispatch Patrol Vertical selected
         ]
       ]
     ]
 
-playView : (Address (Maybe PlayAction)) -> PlayModel -> Html.Html
-playView address {setup, missileLog} =
-  let nowhere = (mailbox ()).address
-      clickHandler action =
+playView : (PlayAction -> Message) -> PlayModel -> Html.Html
+playView dispatch {setup, missileLog} =
+  let clickHandler action =
         case action of
-          Click pos -> Just (Fire pos)
-          _ -> Nothing
+          Click pos -> (dispatch (Fire pos))
+          _ -> (discard ())
   in
   div [ ]
   [
-    gameGrid {
-      address = (Signal.forwardTo nowhere (always ())),
+    gameGrid discard {
       dropTarget = False,
       styles = [("margin", "50px"),("float", "left")],
       content = (map ship setup)
     },
-    gameGrid {
-      address = (Signal.forwardTo address clickHandler),
+    gameGrid clickHandler {
       dropTarget = False,
       styles = [("margin", "50px"),("float", "left")],
       content = (map missileIndicator missileLog)
     }
   ]
 
-view : (Address GameModelAction) -> GameModel -> Html.Html
-view address model =
+view : (GameModelAction -> Message) -> GameModel -> Html.Html
+view dispatch model =
   case model of
     Preparing prepareModel ->
-      prepareView (Signal.forwardTo address Prepare) prepareModel
+      prepareView (dispatch << Prepare) prepareModel
 
     Playing playModel ->
-      playView (Signal.forwardTo address Play) playModel
+      playView (dispatch << Play) playModel
 
 
 --
@@ -245,4 +241,4 @@ missileLog =
 
 main : Html.Html
 -- main = view (mailbox NoOp).address (Playing (ships, missileLog))
-main = view (mailbox NoOp).address (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
+main = view discard (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
