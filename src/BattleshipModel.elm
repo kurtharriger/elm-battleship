@@ -67,6 +67,7 @@ type GameModelAction
   | PlayGame (List ShipPlacement)
   | Play PlayAction
   | NoOp
+  | Initialize Random.Seed
 
 
 nextShipToPlace : List ShipPlacement -> ShipType
