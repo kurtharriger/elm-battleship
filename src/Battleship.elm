@@ -1,23 +1,21 @@
 module Battleship where
 
 import Html
-import Signal exposing (map, foldp,mailbox, Mailbox, Address, Signal, message, Message)
-import BattleshipView exposing (view)
+import Signal exposing (Address, Signal, message)
+import BattleshipView
 import BattleshipModel exposing (..)
+import StartApp.Simple exposing (start)
 
-gameMailbox : Mailbox GameModelAction
-gameMailbox = mailbox NoOp
 
-gameDispatcher : (GameModelAction -> Message)
-gameDispatcher = message gameMailbox.address
+view : Address GameModelAction -> GameModel -> Html.Html
+view address =
+  BattleshipView.view (message address)
 
-state : Signal GameModelAction -> Signal GameModel
-state = Debug.watch "state" <| foldp updateGameModel initModel
-
-logging : Signal a -> Signal a
-logging =
-  Signal.map (Debug.log "signal")
 
 main : Signal Html.Html
 main =
-  Signal.map (view gameDispatcher) ((logging >> state) gameMailbox.signal)
+  start {
+    model = initModel,
+    view = view,
+    update = updateGameModel
+  }
