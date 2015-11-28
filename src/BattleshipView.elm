@@ -7,6 +7,7 @@ import List exposing (map, map2, concatMap, append, concat, length)
 import BattleshipModel exposing (..)
 import Signal exposing (Message, mailbox, Address)
 import Json.Decode
+import Random
 
 
 squareSize : Int
@@ -257,4 +258,7 @@ missileLog =
 
 main : Html.Html
 -- main = view (mailbox NoOp).address (Playing (ships, missileLog))
-main = view discard (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
+--main = view discard (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
+main = view discard randomModel
+
+randomModel = Playing {setup =  fst (randomPositionings (Random.initialSeed 42)), missileLog = []}

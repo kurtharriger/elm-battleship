@@ -2,6 +2,7 @@ module BattleshipModel where
 
 import List exposing ((::), length, map, any)
 import Signal exposing (Mailbox, Message, mailbox)
+import Random
 
 type ShipType
   = AircraftCarrier
@@ -22,6 +23,9 @@ type alias GridPosition
 
 type alias ShipPlacement
   = (ShipType, GridPosition, Orientation)
+
+shipPlacement shipType orientation gridPosition =
+  (shipType, gridPosition, orientation)
 
 
 type MissileResult
@@ -50,6 +54,7 @@ type GameModel
 type PrepareAction
   = PlaceShip ShipPlacement
   | SelectShip ShipType Orientation
+
 
 type PlayAction
   = Fire GridPosition
@@ -109,6 +114,9 @@ canPlaceShip placed placement =
         ) placed)
 
 
+
+
+
 updatePreparing : PrepareAction -> PrepareModel -> PrepareModel
 updatePreparing action model =
   case action of
@@ -166,3 +174,30 @@ nowhere = mailbox ()
 discard : (a -> Message)
 discard a =
   Signal.message nowhere.address ()
+
+
+randomOrientation : Random.Generator Orientation
+randomOrientation =
+  (Random.map
+    (\b -> if b then Horizontal else Vertical)
+    (Random.bool))
+
+randomPlacement : ShipType -> Random.Generator ShipPlacement
+randomPlacement shipType =
+  (Random.map2
+    (\pos orientation -> shipPlacement shipType orientation pos)
+    (Random.pair (Random.int 0 9) (Random.int 0 9))
+    (randomOrientation))
+
+-- todo: try to rewrite this as generator?
+randomValidPlacement : ShipType -> (List ShipPlacement, Random.Seed) -> (List ShipPlacement, Random.Seed)
+randomValidPlacement shipType (current, seed) =
+  let  (placement,seed) = Random.generate (randomPlacement shipType) seed
+  in
+  case (canPlaceShip current placement) of
+    True -> (placement :: current,seed)
+    False -> randomValidPlacement shipType (current, seed)
+
+randomPositionings : Random.Seed -> (List ShipPlacement, Random.Seed)
+randomPositionings seed =
+    List.foldl randomValidPlacement ([],seed) [AircraftCarrier, Battleship, Cruiser, Submarine, Patrol]
