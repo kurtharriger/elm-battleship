@@ -166,8 +166,8 @@ draggableShip dispatch shipType orientation selected =
   ]
 
 
-prepareView : (PrepareAction -> Message) -> PrepareModel -> Html.Html
-prepareView dispatch {placed, selected} =
+prepareView : (PrepareAction -> Message) -> GameModel -> Html.Html
+prepareView dispatch {setup, selected} =
   let
     gridMessage gridAction =
       case (selected, gridAction) of
@@ -181,11 +181,11 @@ prepareView dispatch {placed, selected} =
         gameGrid gridMessage {
           dropTarget = True,
           styles = [("margin", "50px"),("float", "left")],
-          content = (map ship placed)
+          content = (map ship setup)
         }
       ],
       div [ style [("margin", "50px"), ("float", "left")] ] [
-        text ("Click grid to place the " ++ (shipName <| nextShipToPlace placed)),
+        text ("Click grid to place the " ++ (shipName <| nextShipToPlace setup)),
         div [style [("height", "100px")]] [
           draggableShip dispatch AircraftCarrier Horizontal selected,
           draggableShip dispatch Battleship Horizontal selected,
@@ -203,7 +203,7 @@ prepareView dispatch {placed, selected} =
       ]
     ]
 
-playView : (PlayAction -> Message) -> PlayModel -> Html.Html
+playView : (PlayAction -> Message) -> GameModel -> Html.Html
 playView dispatch {setup, missileLog} =
   let clickHandler action =
         case action of
@@ -226,12 +226,12 @@ playView dispatch {setup, missileLog} =
 
 view : (GameModelAction -> Message) -> GameModel -> Html.Html
 view dispatch model =
-  case model of
-    Preparing prepareModel ->
-      prepareView (dispatch << Prepare) prepareModel
+  case model.state of
+    Preparing ->
+      prepareView (dispatch << Prepare) model
 
-    Playing playModel ->
-      playView (dispatch << Play) playModel
+    Playing  ->
+      playView (dispatch << Play) model
 
 
 --
@@ -261,4 +261,7 @@ main : Html.Html
 --main = view discard (Preparing { initPreparingModel | placed = [(AircraftCarrier, (1,1), Horizontal)]})
 main = view discard randomModel
 
-randomModel = Playing {setup =  fst (randomPositionings (Random.initialSeed 42)), missileLog = []}
+randomModel : GameModel
+randomModel =
+  let model = initModel (Random.initialSeed 42)
+  in updateGameModel (PlayGame model.opposingSetup) model

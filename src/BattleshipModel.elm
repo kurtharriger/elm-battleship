@@ -3,6 +3,8 @@ module BattleshipModel where
 import List exposing ((::), length, map, any)
 import Signal exposing (Mailbox, Message, mailbox)
 import Random
+import Time
+
 
 type ShipType
   = AircraftCarrier
@@ -24,6 +26,8 @@ type alias GridPosition
 type alias ShipPlacement
   = (ShipType, GridPosition, Orientation)
 
+
+shipPlacement : ShipType -> Orientation -> GridPosition -> ShipPlacement
 shipPlacement shipType orientation gridPosition =
   (shipType, gridPosition, orientation)
 
@@ -36,19 +40,18 @@ type MissileResult
 type alias MissileLog = List MissileResult
 
 
-type alias PrepareModel = {
-    placed: List ShipPlacement,
-    selected: Maybe (ShipType, Orientation)
-  }
+type GameModelState
+  = Preparing
+  | Playing
 
-type alias PlayModel = {
+type alias GameModel = {
+  state : GameModelState,
+  selected: Maybe (ShipType, Orientation),
   setup: List ShipPlacement,
-  missileLog: MissileLog
+  missileLog: MissileLog,
+  opposingSetup: List ShipPlacement,
+  seed : Random.Seed
 }
-
-type GameModel
-  = Preparing PrepareModel
-  | Playing PlayModel
 
 
 type PrepareAction
@@ -64,14 +67,6 @@ type GameModelAction
   | PlayGame (List ShipPlacement)
   | Play PlayAction
   | NoOp
-
-
-initPreparingModel : PrepareModel
-initPreparingModel  =
-  {
-    placed = [],
-    selected = Nothing
-  }
 
 
 nextShipToPlace : List ShipPlacement -> ShipType
@@ -98,11 +93,13 @@ getShipPositions (shipType, (x,y), orientation) =
         if end >= 10 then Nothing
         else Just <| map (\i -> (x,i)) [y..end]
 
+
 hitShip : ShipPlacement -> GridPosition -> Bool
 hitShip placement pos =
   case getShipPositions placement of
     Just positions -> any ((==) pos) positions
     _ -> False
+
 
 canPlaceShip : List ShipPlacement -> ShipPlacement -> Bool
 canPlaceShip placed placement =
@@ -114,35 +111,41 @@ canPlaceShip placed placement =
         ) placed)
 
 
-
-
-
-updatePreparing : PrepareAction -> PrepareModel -> PrepareModel
+updatePreparing : PrepareAction -> GameModel -> GameModel
 updatePreparing action model =
   case action of
     PlaceShip placement ->
-      if canPlaceShip model.placed placement then
-        { model | placed = placement :: model.placed }
+      if canPlaceShip model.setup placement then
+        { model | setup = placement :: model.setup }
       else model
     SelectShip shipType orientation ->
       { model | selected = Just (shipType, orientation) }
 
 
-initModel : GameModel
-initModel = Preparing initPreparingModel
-
+initModel : Random.Seed -> GameModel
+initModel seed =
+  let (opposingSetup, seed) = randomPositionings seed
+  in
+  {
+    seed = seed,
+    opposingSetup = opposingSetup,
+    setup = [],
+    selected = Nothing,
+    state = Preparing,
+    missileLog = []
+  }
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
-  case (model, action) of
-    (Preparing prepareModel, Prepare prepareAction) ->
-      let newModel = (updatePreparing prepareAction prepareModel)
+  case (model.state, action) of
+    (Preparing, Prepare prepareAction) ->
+      let (model) = updatePreparing prepareAction model
       in
-      if (length newModel.placed) == 5 then
-        updateGameModel (PlayGame newModel.placed) model
-      else Preparing newModel
+      if (length model.setup) == 5 then
+        updateGameModel (PlayGame model.setup) model
+      else model
     (_, PlayGame setup) ->
-      Playing {setup = setup, missileLog = []}
+      {model | setup = setup, state = Playing}
     _ -> model
 
 
@@ -182,12 +185,14 @@ randomOrientation =
     (\b -> if b then Horizontal else Vertical)
     (Random.bool))
 
+
 randomPlacement : ShipType -> Random.Generator ShipPlacement
 randomPlacement shipType =
   (Random.map2
     (\pos orientation -> shipPlacement shipType orientation pos)
     (Random.pair (Random.int 0 9) (Random.int 0 9))
     (randomOrientation))
+
 
 -- todo: try to rewrite this as generator?
 randomValidPlacement : ShipType -> (List ShipPlacement, Random.Seed) -> (List ShipPlacement, Random.Seed)
@@ -198,6 +203,14 @@ randomValidPlacement shipType (current, seed) =
     True -> (placement :: current,seed)
     False -> randomValidPlacement shipType (current, seed)
 
+
 randomPositionings : Random.Seed -> (List ShipPlacement, Random.Seed)
 randomPositionings seed =
     List.foldl randomValidPlacement ([],seed) [AircraftCarrier, Battleship, Cruiser, Submarine, Patrol]
+
+
+initialSeed : Signal Random.Seed
+initialSeed =
+  Signal.map
+    (\(time, _) -> Random.initialSeed (round time))
+    (Time.timestamp (Signal.constant ()))
