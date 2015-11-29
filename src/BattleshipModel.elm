@@ -33,12 +33,19 @@ shipPlacement shipType orientation gridPosition =
 
 
 type MissileResult
-  = Hit GridPosition
-  | Miss GridPosition
+  = Hit
+  | Miss
 
+type alias MissileLogEntry =
+  {
+    position : GridPosition,
+    result : MissileResult
+  }
 
-type alias MissileLog = List MissileResult
+type alias MissileLog = List MissileLogEntry
 
+logMissile : GridPosition -> MissileResult -> MissileLogEntry
+logMissile position result = MissileLogEntry position result
 
 type GameModelState
   = Preparing
@@ -61,6 +68,7 @@ type PrepareAction
 
 type PlayAction
   = Fire GridPosition
+
 
 type GameModelAction
   = Prepare PrepareAction
@@ -110,6 +118,12 @@ canPlaceShip placed placement =
          (any (hitShip placement) positions)
         ) placed)
 
+isHit : List ShipPlacement -> GridPosition -> Bool
+isHit setup pos =
+  any (flip hitShip pos) setup
+
+toMissileResult : Bool -> MissileResult
+toMissileResult isHit = if isHit then Hit else Miss
 
 updatePreparing : PrepareAction -> GameModel -> GameModel
 updatePreparing action model =
@@ -137,6 +151,8 @@ initModel seed =
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
+  let _ = (Debug.log "action" action)
+  in
   case (model.state, action) of
     (Preparing, Prepare prepareAction) ->
       let (model) = updatePreparing prepareAction model
@@ -144,8 +160,10 @@ updateGameModel action model =
       if (length model.setup) == 5 then
         updateGameModel (PlayGame model.setup) model
       else model
-    (_, PlayGame setup) ->
+    (Preparing, PlayGame setup) ->
       {model | setup = setup, state = Playing}
+    (Playing, Play (Fire pos)) ->
+      { model | missileLog = (logMissile pos <| toMissileResult <| isHit model.opposingSetup pos) :: model.missileLog }
     _ -> model
 
 

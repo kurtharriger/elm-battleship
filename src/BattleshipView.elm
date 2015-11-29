@@ -121,14 +121,14 @@ gameGrid dispatch {styles, dropTarget, content}  =
     (append (map (gameSquare {dispatch = dispatch, dropTarget = dropTarget}) allPositions) content)
 
 
-missileIndicator : MissileResult -> Html.Html
-missileIndicator result =
-  let (color, pos) = case result of
-    Miss pos -> ("white", pos)
-    Hit pos -> ("red", pos)
+missileIndicator : MissileLogEntry -> Html.Html
+missileIndicator {position, result} =
+  let color = case result of
+    Miss -> "white"
+    Hit -> "red"
   in
   div [
-    style ((gridPositioned pos) `append` [
+    style ((gridPositioned position) `append` [
       ("width", squareSize |> px),
       ("height", squareSize |> px)
     ])
@@ -247,12 +247,12 @@ ships = [
    (Patrol, (9,6), Horizontal)
   ]
 
-missileLog : List MissileResult
+missileLog : MissileLog
 missileLog =
   [
-    Hit (1,2),
-    Miss (3, 4),
-    Miss (8, 2)
+    logMissile (1,2) Hit,
+    logMissile (3, 4) Miss,
+    logMissile (8, 2) Miss
   ]
 
 
