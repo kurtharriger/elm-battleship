@@ -24,10 +24,10 @@ main =
       (\(seed, action) -> Debug.log "initilize" (initModel seed))
       (Signal.map2 (,) initialSeed gameMailbox.signal))
 
-
-send : GameModelAction -> Task GameModelAction ()
-send = (Signal.send gameMailbox.address)
-
-port tasks : Task GameModelAction ()
-port tasks =
-  send (PlayGame BattleshipView.ships) 
+--
+-- send : GameModelAction -> Task GameModelAction ()
+-- send = (Signal.send gameMailbox.address)
+--
+-- port tasks : Task GameModelAction ()
+-- port tasks =
+--   send (PlayGame BattleshipView.ships)

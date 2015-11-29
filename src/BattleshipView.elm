@@ -233,6 +233,12 @@ view dispatch model =
     Playing  ->
       playView (dispatch << Play) model
 
+    GameOver winner ->
+      div [] [
+        text ("Winner: " ++ (toString winner)),
+        playView (dispatch << Play) model
+      ]
+
 
 --
 -- Example state for testing

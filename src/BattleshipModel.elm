@@ -14,6 +14,30 @@ type ShipType
   | Patrol
 
 
+allShips : List ShipType
+allShips = [AircraftCarrier, Battleship, Cruiser, Submarine, Patrol]
+
+
+shipName : ShipType -> String
+shipName shipType =
+  case shipType of
+    AircraftCarrier -> "Aircraft Carrier"
+    Battleship -> "Battleship"
+    Cruiser -> "Cruiser"
+    Submarine -> "Submarine"
+    Patrol -> "Patrol Boat"
+
+
+shipLength : ShipType -> Int
+shipLength shipType =
+  case shipType of
+      AircraftCarrier -> 5
+      Battleship -> 4
+      Submarine -> 3
+      Cruiser -> 3
+      Patrol -> 2
+
+
 type Orientation
   = Horizontal
   | Vertical
@@ -36,20 +60,26 @@ type MissileResult
   = Hit
   | Miss
 
+
 type alias MissileLogEntry =
   {
     position : GridPosition,
     result : MissileResult
   }
 
+
 type alias MissileLog = List MissileLogEntry
+
 
 logMissile : GridPosition -> MissileResult -> MissileLogEntry
 logMissile position result = MissileLogEntry position result
 
+
 type GameModelState
   = Preparing
   | Playing
+  | GameOver Winner
+
 
 type alias GameModel = {
   state : GameModelState,
@@ -76,6 +106,11 @@ type GameModelAction
   | PlayGame (List ShipPlacement)
   | Play PlayAction
   | NoOp
+
+
+type Winner
+  = Player
+  | Opponent
 
 
 nextShipToPlace : List ShipPlacement -> ShipType
@@ -119,12 +154,17 @@ canPlaceShip placed placement =
          (any (hitShip placement) positions)
         ) placed)
 
-isHit : List ShipPlacement -> GridPosition -> Bool
-isHit setup pos =
-  any (flip hitShip pos) setup
+missileResult : List ShipPlacement -> GridPosition -> MissileResult
+missileResult setup pos =
+  if any (flip hitShip pos) setup then Hit else Miss
 
-toMissileResult : Bool -> MissileResult
-toMissileResult isHit = if isHit then Hit else Miss
+
+isHit : MissileResult -> Bool
+isHit result =
+  case result of
+    Hit -> True
+    Miss -> False
+
 
 updatePreparing : PrepareAction -> GameModel -> GameModel
 updatePreparing action model =
@@ -156,21 +196,37 @@ isAlreadyLogged : GridPosition -> MissileLog  -> Bool
 isAlreadyLogged pos =
   any (\{position} -> position == pos)
 
+
 fireOpponentMissile : GameModel -> GameModel
 fireOpponentMissile model =
   let (pos, seed) = Random.generate randomGridPosition model.seed
-      _ = Debug.log "opponent fires" pos
   in
   if isAlreadyLogged pos model.opposingMissileLog then
     fireOpponentMissile { model | seed = seed }
   else
-    { model | seed = seed,
-      opposingMissileLog = (logMissile pos <| toMissileResult <| isHit model.setup pos) ::  model.opposingMissileLog }
+    let opposingMissileLog = (logMissile pos <| missileResult model.setup pos) ::  model.opposingMissileLog
+        destroyed = isPlayerDestroyed opposingMissileLog
+    in
+      { model |
+        seed = seed,
+        opposingMissileLog = opposingMissileLog,
+        state = if destroyed then GameOver Opponent else model.state
+      }
+
+
+
+isPlayerDestroyed : MissileLog -> Bool
+isPlayerDestroyed missileLog =
+    let hitsRequired = List.sum <| map shipLength allShips
+        hits = List.length <| List.filter (.result >> isHit) missileLog
+    in
+    hits >= hitsRequired
+
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
-  let _ = (Debug.log "action" action)
-  in
+  -- let _ = (Debug.log "action" action)
+  -- in
   case (model.state, action) of
     (Preparing, Prepare prepareAction) ->
       let (model) = updatePreparing prepareAction model
@@ -184,30 +240,16 @@ updateGameModel action model =
       if isAlreadyLogged pos model.missileLog then
         model
       else
-        fireOpponentMissile { model | missileLog = (logMissile pos <| toMissileResult <| isHit model.opposingSetup pos) :: model.missileLog }
-
+        let missileLog = (logMissile pos <| missileResult model.opposingSetup pos) :: model.missileLog
+            destroyed = isPlayerDestroyed model.missileLog
+            state = if destroyed then GameOver Player else model.state
+            newModel = { model | missileLog = missileLog, state = state }
+        in
+          if destroyed then
+            newModel
+          else
+              fireOpponentMissile newModel
     _ -> model
-
-
-shipLength : ShipType -> Int
-shipLength shipType =
-  case shipType of
-      AircraftCarrier -> 5
-      Battleship -> 4
-      Submarine -> 3
-      Cruiser -> 3
-      Patrol -> 2
-
-
-shipName : ShipType -> String
-shipName shipType =
-  case shipType of
-    AircraftCarrier -> "Aircraft Carrier"
-    Battleship -> "Battleship"
-    Cruiser -> "Cruiser"
-    Submarine -> "Submarine"
-    Patrol -> "Patrol Boat"
-
 
 
 nowhere : Mailbox ()
@@ -250,7 +292,7 @@ randomValidPlacement shipType (current, seed) =
 
 randomPositionings : Random.Seed -> (List ShipPlacement, Random.Seed)
 randomPositionings seed =
-    List.foldl randomValidPlacement ([],seed) [AircraftCarrier, Battleship, Cruiser, Submarine, Patrol]
+    List.foldl randomValidPlacement ([],seed) allShips
 
 
 initialSeed : Signal Random.Seed
