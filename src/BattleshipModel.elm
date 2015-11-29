@@ -123,6 +123,11 @@ nextShipToPlace ships =
     _ -> Patrol
 
 
+isAlreadyPlaced : ShipType -> List ShipPlacement -> Bool
+isAlreadyPlaced shipType =
+  any (\(ship, pos, orientation) -> shipType == ship)
+
+
 getShipPositions : ShipPlacement -> Maybe (List GridPosition)
 getShipPositions (shipType, (x,y), orientation) =
   case orientation of
@@ -147,12 +152,17 @@ hitShip placement pos =
 
 canPlaceShip : List ShipPlacement -> ShipPlacement -> Bool
 canPlaceShip placed placement =
-  case getShipPositions placement of
-    Nothing -> False
-    Just positions ->
-      not (any (\placement ->
-         (any (hitShip placement) positions)
-        ) placed)
+  let (shipType, _, _) = placement
+  in
+  if (isAlreadyPlaced shipType placed) then
+    False
+  else
+    case getShipPositions placement of
+      Nothing -> False
+      Just positions ->
+        not (any (\placement ->
+           (any (hitShip placement) positions)
+          ) placed)
 
 missileResult : List ShipPlacement -> GridPosition -> MissileResult
 missileResult setup pos =
