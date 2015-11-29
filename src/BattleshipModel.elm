@@ -57,6 +57,7 @@ type alias GameModel = {
   setup: List ShipPlacement,
   missileLog: MissileLog,
   opposingSetup: List ShipPlacement,
+  opposingMissileLog: MissileLog,
   seed : Random.Seed
 }
 
@@ -146,8 +147,25 @@ initModel seed =
     setup = [],
     selected = Nothing,
     state = Preparing,
-    missileLog = []
+    missileLog = [],
+    opposingMissileLog = []
   }
+
+
+isAlreadyLogged : GridPosition -> MissileLog  -> Bool
+isAlreadyLogged pos =
+  any (\{position} -> position == pos)
+
+fireOpponentMissile : GameModel -> GameModel
+fireOpponentMissile model =
+  let (pos, seed) = Random.generate randomGridPosition model.seed
+      _ = Debug.log "opponent fires" pos
+  in
+  if isAlreadyLogged pos model.opposingMissileLog then
+    fireOpponentMissile { model | seed = seed }
+  else
+    { model | seed = seed,
+      opposingMissileLog = (logMissile pos <| toMissileResult <| isHit model.setup pos) ::  model.opposingMissileLog }
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
@@ -163,7 +181,11 @@ updateGameModel action model =
     (Preparing, PlayGame setup) ->
       {model | setup = setup, state = Playing}
     (Playing, Play (Fire pos)) ->
-      { model | missileLog = (logMissile pos <| toMissileResult <| isHit model.opposingSetup pos) :: model.missileLog }
+      if isAlreadyLogged pos model.missileLog then
+        model
+      else
+        fireOpponentMissile { model | missileLog = (logMissile pos <| toMissileResult <| isHit model.opposingSetup pos) :: model.missileLog }
+
     _ -> model
 
 
@@ -203,12 +225,16 @@ randomOrientation =
     (\b -> if b then Horizontal else Vertical)
     (Random.bool))
 
+randomGridPosition : Random.Generator (Int, Int)
+randomGridPosition =
+  (Random.pair (Random.int 0 9) (Random.int 0 9))
+
 
 randomPlacement : ShipType -> Random.Generator ShipPlacement
 randomPlacement shipType =
   (Random.map2
     (\pos orientation -> shipPlacement shipType orientation pos)
-    (Random.pair (Random.int 0 9) (Random.int 0 9))
+    randomGridPosition
     (randomOrientation))
 
 

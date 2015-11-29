@@ -204,7 +204,7 @@ prepareView dispatch {setup, selected} =
     ]
 
 playView : (PlayAction -> Message) -> GameModel -> Html.Html
-playView dispatch {setup, missileLog} =
+playView dispatch {setup, missileLog, opposingMissileLog} =
   let clickHandler action =
         case action of
           Click pos -> (dispatch (Fire pos))
@@ -215,7 +215,7 @@ playView dispatch {setup, missileLog} =
     gameGrid discard {
       dropTarget = False,
       styles = [("margin", "50px"),("float", "left")],
-      content = (map ship setup)
+      content = (map ship setup) `append` (map missileIndicator opposingMissileLog)
     },
     gameGrid clickHandler {
       dropTarget = False,
