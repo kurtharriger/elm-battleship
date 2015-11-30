@@ -235,8 +235,6 @@ isPlayerDestroyed missileLog =
 
 updateGameModel : GameModelAction -> GameModel -> GameModel
 updateGameModel action model =
-  -- let _ = (Debug.log "action" action)
-  -- in
   case (model.state, action) of
     (Preparing, Prepare prepareAction) ->
       let (model) = updatePreparing prepareAction model
@@ -251,7 +249,7 @@ updateGameModel action model =
         model
       else
         let missileLog = (logMissile pos <| missileResult model.opposingSetup pos) :: model.missileLog
-            destroyed = isPlayerDestroyed model.missileLog
+            destroyed = isPlayerDestroyed missileLog
             state = if destroyed then GameOver Player else model.state
             newModel = { model | missileLog = missileLog, state = state }
         in

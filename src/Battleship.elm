@@ -6,7 +6,7 @@ import Signal.Extra exposing (foldp')
 import BattleshipView
 import BattleshipModel exposing (..)
 import Task exposing (Task)
-
+import Random
 
 
 view : Address GameModelAction -> GameModel -> Html.Html
@@ -16,13 +16,23 @@ view address =
 gameMailbox : Mailbox GameModelAction
 gameMailbox = mailbox NoOp
 
+
+watches : GameModel -> GameModel
+watches model =
+  let _ = (Debug.watch "want to cheat?" model.opposingSetup)
+      _  = Debug.watch "hits" <| List.length <| List.filter (.result >> isHit) model.missileLog
+  in
+  model
+
+
 main : Signal Html.Html
 main =
   Signal.map
     (view gameMailbox.address)
-    (foldp' (snd >> updateGameModel)
-      (\(seed, action) -> Debug.log "initilize" (initModel seed))
-      (Signal.map2 (,) initialSeed gameMailbox.signal))
+    (Signal.map watches
+      (foldp' (snd >> Debug.log "message" >> updateGameModel)
+        (\(seed, action) -> initModel seed)
+        (Signal.map2 (,) initialSeed gameMailbox.signal)))
 
 --
 -- send : GameModelAction -> Task GameModelAction ()
