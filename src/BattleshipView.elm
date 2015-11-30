@@ -149,26 +149,47 @@ missileIndicator {position, result} =
   ]
 
 
-draggableShip : (PrepareAction -> Message) -> ShipType -> Orientation -> Maybe (ShipType, Orientation)-> Html.Html
-draggableShip dispatch shipType orientation selected =
+draggableShip : (PrepareAction -> Message) -> ShipType -> Orientation -> GameModel -> Html.Html
+draggableShip dispatch shipType orientation model =
   let highlight =
-    case selected of
-      Just (selectedShipType, selectedOrientation) ->
-        if selectedShipType == shipType && selectedOrientation == orientation then ("border", "1px dashed blue")
-        else ("border", "none")
-      _ -> ("border", "none")
+      case model.selected of
+        Just (selectedShipType, selectedOrientation) ->
+          if selectedShipType == shipType && selectedOrientation == orientation then ("border", "1px dashed blue")
+          else ("border", "none")
+        _ -> ("border", "none")
+      display =
+        if (isAlreadyPlaced shipType model.setup) then ("visibility", "hidden") else ("visibility", "visible")
   in
-  div [style [("float","left"), highlight]] [
+  div [style [("float","left"), highlight, display]] [
     shipImg shipType orientation [
       onClick (always (dispatch (SelectShip shipType orientation))),
       onDragStart (always (dispatch (SelectShip shipType orientation)))
     ]
   ]
 
+shipYard : (PrepareAction -> Message) -> GameModel -> Html.Html
+shipYard dispatch model =
+  div [ style [("margin", "50px"), ("float", "left")] ] [
+    div [style [("height", "100px")]] [
+      draggableShip dispatch AircraftCarrier Horizontal model,
+      draggableShip dispatch Battleship Horizontal model,
+      draggableShip dispatch Cruiser Horizontal model,
+      draggableShip dispatch Submarine Horizontal model,
+      draggableShip dispatch Patrol Horizontal model
+    ],
+    div [] [
+      draggableShip dispatch AircraftCarrier Vertical model,
+      draggableShip dispatch Battleship Vertical model,
+      draggableShip dispatch Cruiser Vertical model,
+      draggableShip dispatch Submarine Vertical model,
+      draggableShip dispatch Patrol Vertical model
+    ]
+  ]
 
 prepareView : (PrepareAction -> Message) -> GameModel -> Html.Html
-prepareView dispatch {setup, selected} =
+prepareView dispatch model =
   let
+    {setup, selected} = model
     gridMessage gridAction =
       case (selected, gridAction) of
         (Just (shipType, orientation), Click gridPosition) -> dispatch (PlaceShip (shipType, gridPosition, orientation))
@@ -184,23 +205,7 @@ prepareView dispatch {setup, selected} =
           content = (map ship setup)
         }
       ],
-      div [ style [("margin", "50px"), ("float", "left")] ] [
-        text ("Click grid to place the " ++ (shipName <| nextShipToPlace setup)),
-        div [style [("height", "100px")]] [
-          draggableShip dispatch AircraftCarrier Horizontal selected,
-          draggableShip dispatch Battleship Horizontal selected,
-          draggableShip dispatch Cruiser Horizontal selected,
-          draggableShip dispatch Submarine Horizontal selected,
-          draggableShip dispatch Patrol Horizontal selected
-        ],
-        div [] [
-          draggableShip dispatch AircraftCarrier Vertical selected,
-          draggableShip dispatch Battleship Vertical selected,
-          draggableShip dispatch Cruiser Vertical selected,
-          draggableShip dispatch Submarine Vertical selected,
-          draggableShip dispatch Patrol Vertical selected
-        ]
-      ]
+      shipYard dispatch model
     ]
 
 playView : (PlayAction -> Message) -> GameModel -> Html.Html
