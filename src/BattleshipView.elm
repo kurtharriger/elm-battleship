@@ -9,6 +9,7 @@ import Signal exposing (Message, mailbox, Address)
 import Json.Decode
 import Random
 
+import Native.DragDrop
 
 squareSize : Int
 squareSize = 32
@@ -66,21 +67,25 @@ type GridAction
   = Click GridPosition
   | Drop GridPosition
 
+
 onClick : (() -> Message) -> Html.Attribute
 onClick =
   on "click" (Json.Decode.succeed ())
+
 
 onDragOver : (() -> Message) -> Html.Attribute
 onDragOver =
   onWithOptions "dragover" {preventDefault = True, stopPropagation = False} (Json.Decode.succeed ())
 
+
 onDrop : (() -> Message) -> Html.Attribute
 onDrop =
   on "drop" (Json.Decode.succeed ())
 
+
 onDragStart : (() -> Message) -> Html.Attribute
 onDragStart =
-  on "dragstart" (Json.Decode.succeed ())
+  Native.DragDrop.onDragStart {preventDefault = False, stopPropagation = False} (Json.Decode.succeed ())
 
 
 gameSquare : {dispatch: (GridAction -> Message), dropTarget: Bool} -> GridPosition -> Html.Html
