@@ -27,12 +27,12 @@ shipImageSrc : ShipType -> Orientation -> String
 shipImageSrc shipType orientation =
   case (shipType, orientation) of
     (AircraftCarrier, Horizontal) -> "img/AircraftCarrier.png"
-    (Battleship, Horizontal) -> "img/Battleship.png"
+    (Battleship, Horizontal) -> "img/BattleShip.png"
     (Cruiser, Horizontal) -> "img/Cruiser.png"
     (Submarine, Horizontal) -> "img/Submarine.png"
     (Patrol, Horizontal) -> "img/PatrolBoat.png"
     (AircraftCarrier, Vertical) -> "img/AircraftCarrierVertical.png"
-    (Battleship, Vertical) -> "img/BattleshipVertical.png"
+    (Battleship, Vertical) -> "img/BattleShipVertical.png"
     (Cruiser, Vertical) -> "img/CruiserVertical.png"
     (Submarine, Vertical) -> "img/SubmarineVertical.png"
     (Patrol, Vertical) -> "img/PatrolBoatVertical.png"
